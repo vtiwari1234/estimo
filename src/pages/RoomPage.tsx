@@ -14,6 +14,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { Timer } from "../components/Timer";
 import { loadProfile, saveProfile, type Profile } from "../lib/identity";
 import { useRoom } from "../lib/useRoom";
+import { BRAND } from "../brand";
 
 type Dialog = "share" | "settings" | "profile" | null;
 
@@ -44,7 +45,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
       <Modal title="You were removed">
         <p className="text-sm text-ink-2">The host removed you from this room.</p>
         <a href="/" className="mt-4 inline-block rounded-xl bg-brand px-4 py-2 font-semibold text-brand-ink">
-          Back to Estimo
+          Back to {BRAND}
         </a>
       </Modal>
     );
@@ -74,6 +75,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-lg leading-tight font-bold">{room.id}</h1>
             <p className="flex items-center gap-1.5 text-xs text-ink-3">
+              <span className="hidden sm:inline">{BRAND} ·</span>
               <span className={`size-2 rounded-full ${status === "open" ? "bg-emerald-500" : "bg-amber-500"}`} />
               {status === "open" ? `${room.online.length} online` : "Reconnecting…"}
             </p>

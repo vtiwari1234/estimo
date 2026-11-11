@@ -4,6 +4,7 @@ import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { randomRoomName, slugify } from "../lib/identity";
 import { ROOM_ID_PATTERN } from "../../shared/protocol";
+import { BRAND, OWNER } from "../brand";
 
 const FEATURES = [
   ["Story queue", "Paste your backlog and work through it one item at a time."],
@@ -52,7 +53,7 @@ export function Home() {
               Estimate together. <span className="text-brand">Flip at once.</span>
             </h1>
             <p className="mt-4 max-w-md text-lg text-ink-2">
-              Estimo is a free, real-time planning poker room. Bring your backlog, vote in private, reveal together and
+              {BRAND} is a free, real-time planning poker room. Bring your backlog, vote in private, reveal together and
               keep a record of every estimate.
             </p>
 
@@ -134,7 +135,7 @@ export function Home() {
       </main>
 
       <footer className="border-t border-line py-6 text-center text-xs text-ink-3">
-        Estimo · free planning poker · no tracking, no ads
+        Made with ♥ by {OWNER} · free planning poker · no tracking, no ads
       </footer>
     </div>
   );
