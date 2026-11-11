@@ -4,7 +4,7 @@ import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { randomRoomName, slugify } from "../lib/identity";
 import { ROOM_ID_PATTERN } from "../../shared/protocol";
-import { BRAND } from "../brand";
+import { BRAND, EDITION } from "../brand";
 import { Footer } from "../components/Footer";
 
 const FEATURES = [
@@ -54,7 +54,7 @@ export function Home() {
               Estimate together. <span className="text-brand">Flip at once.</span>
             </h1>
             <p className="mt-4 max-w-md text-lg text-ink-2">
-              {BRAND} is a free, real-time planning poker room. Bring your backlog, vote in private, reveal together and
+              {BRAND} is a {EDITION === "pro" ? "private" : "free"}, real-time planning poker room. Bring your backlog, vote in private, reveal together and
               keep a record of every estimate.
             </p>
 

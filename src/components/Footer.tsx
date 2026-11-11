@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { OWNER } from "../brand";
+import { APP_NAME, OWNER } from "../brand";
 
 /** The current year, re-checked every minute so an open tab rolls over at New Year. */
 export function useCurrentYear(): number {
@@ -13,6 +13,15 @@ export function useCurrentYear(): number {
 
 export function Footer() {
   const year = useCurrentYear();
+  if (!OWNER) {
+    return (
+      <footer className="border-t border-line px-4 py-8 text-center">
+        <p className="text-sm text-ink-3">
+          © {year} {APP_NAME} · No tracking, no ads
+        </p>
+      </footer>
+    );
+  }
   return (
     <footer className="border-t border-line px-4 py-8 text-center">
       <blockquote className="font-display text-lg font-semibold text-ink-2 italic">

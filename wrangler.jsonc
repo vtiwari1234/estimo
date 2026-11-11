@@ -11,5 +11,16 @@
     "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // The paid site: same code, its own Worker, rooms and (later) custom domain.
+  // Built with `npm run build:pro`, which sets CLOUDFLARE_ENV=pro.
+  "env": {
+    "pro": {
+      "name": "estimo-pro",
+      "durable_objects": {
+        "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+      },
+      "observability": { "enabled": true }
+    }
+  }
 }
