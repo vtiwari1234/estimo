@@ -18,7 +18,7 @@ export function Footer() {
       <blockquote className="font-display text-lg font-semibold text-ink-2 italic">
         “Coz it's {year} and simple things should be free.”
       </blockquote>
-      <p className="mt-1 text-sm text-ink-3">— {OWNER}, who got tired of paying $5 a month to flip cards</p>
+      <p className="mt-1 text-sm text-ink-3">— {OWNER}</p>
       <p className="mt-4 text-xs text-ink-3">Made with ♥ by {OWNER} · no tracking, no ads</p>
     </footer>
   );
