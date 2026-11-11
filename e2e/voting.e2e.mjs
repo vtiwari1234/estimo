@@ -41,11 +41,24 @@ try {
   assert.equal(await ana.getByTestId("revealed-card").count(), 0);
   await shot(ana, "1-voted");
 
+  // Revealed by accident: hide again, then reveal for real.
+  await ana.getByRole("button", { name: "Reveal cards" }).click();
+  await ana.getByRole("button", { name: "Hide cards" }).click();
+  await ben.getByRole("button", { name: "Reveal cards" }).waitFor();
+  assert.equal(await ben.getByTestId("revealed-card").count(), 0);
   await ana.getByRole("button", { name: "Reveal cards" }).click();
   await ben.getByTestId("stat-average").getByText("8").waitFor();
   await ben.getByText("(lowest)").waitFor();
   await shot(ben, "2-revealed-mobile");
   await shot(ana, "2-revealed-desktop");
+
+  // Reset wipes the estimates while the cards are showing.
+  await ana.getByRole("button", { name: "Reset" }).click();
+  await ben.getByText("Pick a card").waitFor();
+  await ana.getByRole("radio", { name: "3 points", exact: true }).click();
+  await ben.getByRole("radio", { name: "8 points", exact: true }).click();
+  await ana.getByRole("button", { name: "Reveal cards" }).click();
+  await ben.getByTestId("stat-average").getByText("5.5").waitFor();
 
   await ana.getByRole("button", { name: "Vote again" }).first().click();
   await ana.getByRole("radio", { name: "5 points", exact: true }).click();

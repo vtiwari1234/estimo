@@ -57,6 +57,8 @@ export interface RoomState {
   /** Votes for the current round, by participant id. */
   votes: Record<string, string>;
   revealed: boolean;
+  /** Set when someone hides revealed cards again, so auto-reveal doesn't flip them straight back. */
+  rehidden?: boolean;
   /** Earlier revealed rounds of the current item, before "vote again". */
   previousRounds: RoundRecord[];
   timer: Timer;
@@ -78,6 +80,7 @@ export type ClientMessage =
   | { type: "profile"; name?: string; color?: string; role?: Role }
   | { type: "vote"; card: string | null }
   | { type: "reveal" }
+  | { type: "hide" }
   | { type: "revote" }
   | { type: "clear" }
   | { type: "accept"; estimate: string }
