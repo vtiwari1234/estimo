@@ -12,11 +12,11 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
   "observability": { "enabled": true },
-  // The paid site: same code, its own Worker, rooms and (later) custom domain.
+  // The paid site: same code, its own Worker (agilesizing), rooms and custom domain agilesizing.com.
   // Built with `npm run build:pro`, which sets CLOUDFLARE_ENV=pro.
   "env": {
     "pro": {
-      "name": "estimo-pro",
+      "name": "agilesizing",
       "durable_objects": {
         "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
       },

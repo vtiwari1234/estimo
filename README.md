@@ -36,7 +36,7 @@ e2e/      multi-browser voting test (Playwright)
 | Site | Build | Worker | Branding |
 |---|---|---|---|
 | Free (personal) | `npm run build` / `npm run deploy` | `estimo` | Vedant's Estimo, with the footer quote (`.env`) |
-| Paid | `npm run build:pro` / `npm run deploy:pro` | `estimo-pro` | Neutral product brand, no personal references (`.env.pro`) |
+| Paid | `npm run build:pro` / `npm run deploy:pro` | `agilesizing` | AgileSizing brand, no personal references (`.env.pro`) |
 
 `npm run dev:pro` runs the paid site locally. The two sites have separate rooms because each Worker has its own Durable Objects.
 
