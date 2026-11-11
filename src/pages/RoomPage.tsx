@@ -132,12 +132,21 @@ export function RoomPage({ roomId }: { roomId: string }) {
                   Reveal cards
                 </button>
               )}
-              {canControl && voteCount > 0 && !room.revealed && (
+              {canControl && room.revealed && (
+                <button
+                  onClick={() => send({ type: "hide" })}
+                  className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-stone-900 shadow-sm hover:opacity-90"
+                >
+                  Hide cards
+                </button>
+              )}
+              {canControl && voteCount > 0 && (
                 <button
                   onClick={() => send({ type: "clear" })}
+                  title="Clear everyone's estimates and start this round over"
                   className="rounded-xl border border-line bg-surface px-4 py-2.5 font-semibold hover:bg-surface-2"
                 >
-                  Clear votes
+                  Reset
                 </button>
               )}
               {!canControl && !room.revealed && <p className="text-sm text-ink-3">The host will reveal the cards.</p>}

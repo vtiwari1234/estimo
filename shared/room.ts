@@ -85,6 +85,7 @@ function canControl(state: RoomState, actor: string): boolean {
 function resetRound(state: RoomState) {
   state.votes = {};
   state.revealed = false;
+  state.rehidden = false;
   state.previousRounds = [];
   state.timer.endsAt = null;
 }
@@ -123,13 +124,14 @@ function onlineVoters(state: RoomState, online: Set<string>): string[] {
 }
 
 function maybeAutoReveal(state: RoomState, online: Set<string>, now: number) {
-  if (!state.settings.autoReveal || state.revealed) return;
+  if (!state.settings.autoReveal || state.revealed || state.rehidden) return;
   const voters = onlineVoters(state, online);
   if (voters.length > 0 && voters.every((id) => id in state.votes)) reveal(state, now);
 }
 
 function reveal(state: RoomState, _now: number) {
   state.revealed = true;
+  state.rehidden = false;
   state.timer.endsAt = null;
 }
 
@@ -207,6 +209,15 @@ export function applyMessage(
       if (state.revealed) return { changed: false };
       if (Object.keys(state.votes).length === 0) return fail("Nobody has voted yet.");
       reveal(state, now);
+      return touch(state, now, ok);
+    }
+
+    case "hide": {
+      const denied = needControl();
+      if (denied) return denied;
+      if (!state.revealed) return { changed: false };
+      state.revealed = false;
+      state.rehidden = true;
       return touch(state, now, ok);
     }
 

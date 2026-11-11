@@ -53,6 +53,51 @@ describe("voting", () => {
     expect(view.stats?.average).toBe(6.5);
   });
 
+  it("hides revealed cards again but keeps the votes", () => {
+    const { room, online, act } = setup();
+    act("ana", { type: "vote", card: "5" });
+    act("ben", { type: "vote", card: "8" });
+    act("ana", { type: "reveal" });
+    expect(act("ben", { type: "hide" }).error).toBeUndefined();
+    expect(room.revealed).toBe(false);
+    expect(toView(room, online, NOW, "cy").votes).toEqual({ ana: true, ben: true });
+    expect(act("cy", { type: "vote", card: "3" }).error).toBeUndefined();
+    act("ana", { type: "reveal" });
+    expect(toView(room, online, NOW).votes).toEqual({ ana: "5", ben: "8", cy: "3" });
+  });
+
+  it("does not auto-reveal straight after someone hides the cards", () => {
+    const { room, act } = setup(["ana", "ben"]);
+    act("ana", { type: "settings", settings: { autoReveal: true } });
+    act("ana", { type: "vote", card: "3" });
+    act("ben", { type: "vote", card: "5" });
+    expect(room.revealed).toBe(true);
+    act("ana", { type: "hide" });
+    act("ben", { type: "vote", card: "8" });
+    expect(room.revealed).toBe(false);
+    act("ana", { type: "clear" });
+    act("ana", { type: "vote", card: "3" });
+    act("ben", { type: "vote", card: "3" });
+    expect(room.revealed).toBe(true);
+  });
+
+  it("reset clears estimates whether or not the cards are revealed", () => {
+    const { room, act } = setup();
+    act("ana", { type: "vote", card: "5" });
+    act("ana", { type: "reveal" });
+    act("ben", { type: "clear" });
+    expect(room.revealed).toBe(false);
+    expect(room.votes).toEqual({});
+  });
+
+  it("only lets the host hide cards when controls are host-only", () => {
+    const { act } = setup();
+    act("ana", { type: "settings", settings: { openControls: false } });
+    act("ana", { type: "vote", card: "5" });
+    act("ana", { type: "reveal" });
+    expect(act("ben", { type: "hide" }).error).toMatch(/host/);
+  });
+
   it("rejects cards that are not in the deck and votes after reveal", () => {
     const { act } = setup();
     expect(act("ana", { type: "vote", card: "7" }).error).toBeTruthy();
