@@ -60,3 +60,17 @@ npm run deploy     # builds and deploys to https://estimo.<your-subdomain>.worke
 ```
 
 To use your own domain, add it under the Worker's **Settings → Domains & Routes** in the Cloudflare dashboard. You can also connect the GitHub repo in **Workers & Pages → Create → Import a repository** so every push to `main` deploys automatically (build command `npm run build`, deploy command `npx wrangler deploy`).
+
+## Deploy (paid site)
+
+The `agilesizing` Worker is connected to this repo under **Settings → Build** with build command `npm run build:pro` and deploy command `npx wrangler deploy`, so every push to `main` deploys both sites. The first deploy creates the `agilesizing` D1 database and attaches agilesizing.com.
+
+Secrets on the `agilesizing` Worker (**Settings → Variables and Secrets**, type Secret, never committed):
+
+| Secret | Where it comes from |
+|---|---|
+| `STRIPE_SECRET_KEY` | Stripe → Developers → API keys |
+| `STRIPE_WEBHOOK_SECRET` | Stripe → Developers → Webhooks → endpoint `https://agilesizing.com/api/billing/webhook` (events `customer.subscription.created/updated/deleted`) |
+| `RESEND_API_KEY` | resend.com, with agilesizing.com added as a sending domain |
+
+The Stripe price ids are plain vars in `wrangler.jsonc` (`env.pro.vars`).
