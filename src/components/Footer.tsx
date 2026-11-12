@@ -16,8 +16,9 @@ export function Footer() {
   if (!OWNER) {
     return (
       <footer className="border-t border-line px-4 py-8 text-center">
-        <p className="text-sm text-ink-3">
-          © {year} {APP_NAME} · No tracking, no ads
+        <p className="text-base font-semibold text-ink-2">No tracking · No ads</p>
+        <p className="mt-2 text-sm text-ink-3">
+          © {year} {APP_NAME}
         </p>
       </footer>
     );
