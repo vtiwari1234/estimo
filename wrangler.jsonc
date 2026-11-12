@@ -17,6 +17,11 @@
   "env": {
     "pro": {
       "name": "agilesizing",
+      "routes": [
+        { "pattern": "agilesizing.com", "custom_domain": true },
+        { "pattern": "www.agilesizing.com", "custom_domain": true }
+      ],
+      "workers_dev": false,
       "durable_objects": {
         "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
       },
