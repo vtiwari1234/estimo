@@ -33,7 +33,7 @@ export class Room extends DurableObject<Env> {
     const url = new URL(request.url);
     if (url.pathname === "/billing" && request.method === "POST") {
       // Only the Worker can reach a Durable Object, and it verifies the webhook first.
-      const plan = (await request.json()) as Plan;
+      const plan = (await request.json()) as Plan | null;
       if (!this.state) this.state = createRoom(url.searchParams.get("room") ?? "room", Date.now());
       this.state.plan = plan;
       this.state.updatedAt = Date.now();

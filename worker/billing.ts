@@ -1,5 +1,7 @@
 import { planFromWebhook, type Interval } from "../shared/plan";
 import { ROOM_ID_PATTERN } from "../shared/protocol";
+import { saveSubscription, subscriptionOf } from "./account";
+import { currentUser } from "./auth";
 import type { Env } from "./index";
 
 /**
@@ -24,10 +26,16 @@ export function billingConfigured(env: Env): boolean {
   return Boolean(env.LS_API_KEY && env.LS_STORE_ID && env.LS_VARIANT_MONTHLY && env.LS_VARIANT_YEARLY);
 }
 
-/** POST /api/billing/checkout {roomId, interval} → {url} of a hosted checkout page. */
+/** POST /api/billing/checkout {interval, roomId?} → {url} of a hosted checkout page. Needs a signed-in owner. */
 export async function createCheckout(request: Request, env: Env): Promise<Response> {
   if (env.EDITION !== "pro") return json({ error: "Not available." }, 404);
   if (!billingConfigured(env)) return json({ error: "Payments aren't set up yet. Please try again later." }, 503);
+  const user = await currentUser(request, env);
+  if (!user) return json({ error: "Please sign in." }, 401);
+  const existing = await subscriptionOf(env, user.id);
+  if (existing && existing.status !== "expired") {
+    return json({ error: "You already have a plan. Manage it from your account page." }, 409);
+  }
   let body: { roomId?: unknown; interval?: unknown };
   try {
     body = await request.json();
@@ -35,7 +43,8 @@ export async function createCheckout(request: Request, env: Env): Promise<Respon
     return json({ error: "Bad request." }, 400);
   }
   const roomId = String(body.roomId ?? "").toLowerCase();
-  if (!ROOM_ID_PATTERN.test(roomId)) return json({ error: "Invalid room." }, 400);
+  const custom: Record<string, string> = { user_id: user.id };
+  if (ROOM_ID_PATTERN.test(roomId)) custom.room_id = roomId;
   const interval: Interval = body.interval === "yearly" ? "yearly" : "monthly";
   const variantId = interval === "yearly" ? env.LS_VARIANT_YEARLY : env.LS_VARIANT_MONTHLY;
   const origin = new URL(request.url).origin;
@@ -51,8 +60,8 @@ export async function createCheckout(request: Request, env: Env): Promise<Respon
       data: {
         type: "checkouts",
         attributes: {
-          checkout_data: { custom: { room_id: roomId } },
-          product_options: { redirect_url: `${origin}/r/${roomId}?upgraded=1` },
+          checkout_data: { email: user.email, custom },
+          product_options: { redirect_url: `${origin}/account?welcome=1` },
         },
         relationships: {
           store: { data: { type: "stores", id: String(env.LS_STORE_ID) } },
@@ -89,7 +98,7 @@ export async function signatureValid(raw: string, signature: string | null, secr
   return sameHex(hex, signature.trim().toLowerCase());
 }
 
-/** POST /api/billing/webhook from Lemon Squeezy: verifies it, then updates the room's plan. */
+/** POST /api/billing/webhook from Lemon Squeezy: verifies it, then updates the owner's plan and rooms. */
 export async function handleWebhook(request: Request, env: Env): Promise<Response> {
   if (env.EDITION !== "pro") return new Response("Not found", { status: 404 });
   const raw = await request.text();
@@ -104,13 +113,7 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
   }
   const update = planFromWebhook(body, Date.now());
   // Acknowledge events we don't use, so the provider doesn't keep retrying them.
-  if (!update || !ROOM_ID_PATTERN.test(update.roomId)) return new Response("Ignored", { status: 200 });
-  const stub = env.ROOMS.get(env.ROOMS.idFromName(update.roomId));
-  const res = await stub.fetch(
-    new Request(`https://room/billing?room=${encodeURIComponent(update.roomId)}`, {
-      method: "POST",
-      body: JSON.stringify(update.plan),
-    }),
-  );
-  return new Response(res.ok ? "OK" : "Room update failed", { status: res.ok ? 200 : 500 });
+  if (!update) return new Response("Ignored", { status: 200 });
+  const ok = await saveSubscription(env, update.userId, update.plan, update.roomId);
+  return new Response(ok ? "OK" : "Saved; some rooms not updated", { status: ok ? 200 : 500 });
 }

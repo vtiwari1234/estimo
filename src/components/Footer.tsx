@@ -19,6 +19,7 @@ export function Footer() {
         <p className="text-base font-semibold text-ink-2">No tracking · No ads</p>
         <nav className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-ink-2">
           <a href="/pricing" className="hover:underline">Pricing</a>
+          <a href="/account" className="hover:underline">Account</a>
           <a href="/terms" className="hover:underline">Terms</a>
           <a href="/privacy" className="hover:underline">Privacy</a>
           <a href="/refunds" className="hover:underline">Refunds</a>

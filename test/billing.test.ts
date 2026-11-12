@@ -86,7 +86,7 @@ describe("plans", () => {
   it("reads a Lemon Squeezy subscription webhook", () => {
     const update = planFromWebhook(
       {
-        meta: { event_name: "subscription_created", custom_data: { room_id: "team-falcon" } },
+        meta: { event_name: "subscription_created", custom_data: { user_id: "u1", room_id: "team-falcon" } },
         data: {
           type: "subscriptions",
           id: "123",
@@ -102,14 +102,18 @@ describe("plans", () => {
       },
       NOW,
     );
+    expect(update?.userId).toBe("u1");
     expect(update?.roomId).toBe("team-falcon");
     expect(update?.plan).toMatchObject({ status: "on_trial", interval: "yearly", subscriptionId: "123" });
     expect(update?.plan.trialEndsAt).toBe(Date.parse("2026-11-26T00:00:00Z"));
   });
 
-  it("ignores other events and subscriptions without a room", () => {
+  it("ignores other events and subscriptions without an account", () => {
     expect(planFromWebhook({ meta: { event_name: "order_created" }, data: { type: "orders" } }, NOW)).toBeNull();
     expect(planFromWebhook({ meta: { event_name: "subscription_created" }, data: { type: "subscriptions" } }, NOW)).toBeNull();
+    expect(
+      planFromWebhook({ meta: { event_name: "subscription_updated", custom_data: { room_id: "x" } }, data: { type: "subscriptions" } }, NOW),
+    ).toBeNull();
   });
 
   it("only shows the billing portal link to the host", () => {
@@ -131,5 +135,16 @@ describe("webhook signature", () => {
     expect(await signatureValid(body + " ", good, "s3cret")).toBe(false);
     expect(await signatureValid(body, null, "s3cret")).toBe(false);
     expect(await signatureValid(body, good, "")).toBe(false);
+  });
+});
+
+describe("sign-in redirects", async () => {
+  const { safeNext } = await import("../worker/auth");
+  it("only allows same-site paths", () => {
+    expect(safeNext("/account?room=team")).toBe("/account?room=team");
+    expect(safeNext("/r/team-falcon")).toBe("/r/team-falcon");
+    expect(safeNext("//evil.com")).toBe("/account");
+    expect(safeNext("https://evil.com")).toBe("/account");
+    expect(safeNext(undefined)).toBe("/account");
   });
 });

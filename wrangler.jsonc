@@ -26,6 +26,8 @@
       // Cloudflare dashboard (Settings → Variables and Secrets), never in this file.
       "vars": {
         "EDITION": "pro",
+        "APP_NAME": "AgileSizing",
+        "EMAIL_FROM": "signin@agilesizing.com",
         "LS_STORE_ID": "",
         "LS_VARIANT_MONTHLY": "",
         "LS_VARIANT_YEARLY": ""
@@ -33,6 +35,8 @@
       "durable_objects": {
         "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
       },
+      // Owner accounts. Created automatically on the first deploy; tables are made on first use.
+      "d1_databases": [{ "binding": "DB", "database_name": "agilesizing" }],
       "observability": { "enabled": true }
     }
   }

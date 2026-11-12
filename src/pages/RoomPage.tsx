@@ -131,7 +131,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
             <Timer room={room} offset={clockOffset} canControl={canControl} send={send} />
           </section>
 
-          <PlanBar room={room} isHost={isHost} />
+          <PlanBar room={room} />
 
           <Table room={room} me={me} />
 

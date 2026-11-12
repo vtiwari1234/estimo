@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FREE_VOTER_LIMIT, PRICES, TRIAL_DAYS } from "../../shared/plan";
+import { FREE_VOTER_LIMIT, MAX_PRO_ROOMS, PRICES, TRIAL_DAYS } from "../../shared/plan";
 import { APP_NAME } from "../brand";
 import { Footer } from "../components/Footer";
 import { Logo } from "../components/Logo";
@@ -31,7 +31,7 @@ function Shell({ title, children }: { title: string; children: ReactNode }) {
 function Pricing() {
   return (
     <Shell title="Pricing">
-      <p>One price per team room. Everyone you invite votes for free, and nobody needs an account.</p>
+      <p>One price per team. Only the person who pays signs in. Everyone you invite just opens the room link and votes.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-line bg-surface p-5">
           <h2 className="!mt-0">Free</h2>
@@ -50,15 +50,15 @@ function Pricing() {
           </p>
           <p className="text-sm">or {PRICES.yearly.label} (save 25%)</p>
           <ul className="mt-3 space-y-1 text-sm">
-            <li>Unlimited voters in your room</li>
+            <li>Unlimited voters in up to {MAX_PRO_ROOMS} rooms, swap them any time</li>
             <li>Everything in Free</li>
             <li>{TRIAL_DAYS}-day free trial, cancel any time</li>
           </ul>
         </div>
       </div>
       <p>
-        Start a trial from inside your room with the <strong>Try Pro</strong> button. You enter a card at checkout. It's charged
-        when the trial ends unless you cancel, and we email you 3 days before.
+        Start a trial from your <a href="/account">account page</a> or the <strong>Try Pro</strong> button in a room. You enter a
+        card at checkout. It's charged when the trial ends unless you cancel, and we email you 3 days before.
       </p>
       <p>
         Private by design: no ads, no tracking, no connectors into your company's tools, and no sign-up for voters. Rooms
@@ -87,10 +87,10 @@ function Terms() {
       </p>
       <h2>Paid plans</h2>
       <p>
-        Pro is sold per room as a subscription ({PRICES.monthly.label} or {PRICES.yearly.label}) with a {TRIAL_DAYS}-day free
-        trial. Payments are processed by our reseller, Lemon Squeezy, which is the merchant of record and handles billing,
-        taxes and receipts. Subscriptions renew automatically until cancelled. You can cancel any time from the billing link
-        in your room or the link in your receipt email, and Pro stays active until the end of the period you paid for.
+        Pro is a subscription ({PRICES.monthly.label} or {PRICES.yearly.label}) on the account of the person who pays, and covers
+        up to {MAX_PRO_ROOMS} rooms they choose. It starts with a {TRIAL_DAYS}-day free trial. Payments are processed by our reseller, Lemon Squeezy, which is the merchant of record and handles billing,
+        taxes and receipts. Subscriptions renew automatically until cancelled. You can cancel any time from your account page
+        or the link in your receipt email, and Pro stays active until the end of the period you paid for.
       </p>
       <h2>Acceptable use</h2>
       <p>Don't use {APP_NAME} for anything illegal, to harass people, or to attack or overload the service.</p>
@@ -116,22 +116,22 @@ function Privacy() {
       <ul>
         <li>The display name and colour you pick, and a random id kept in your browser so you keep your seat.</li>
         <li>What you put in a room: story titles, links, votes and estimates.</li>
-        <li>For Pro rooms, the subscription status from our payment provider. We never see your card details.</li>
+        <li>If you pay: your email address (to sign you in), which rooms your plan covers, and the subscription status from our payment provider. We never see your card details.</li>
       </ul>
       <p>Room data is deleted automatically after 90 days without use.</p>
       <h2>What we don't do</h2>
       <ul>
-        <li>No ads, no analytics trackers, no third-party cookies.</li>
+        <li>No ads, no analytics trackers, no third-party cookies. The only cookie keeps a paying owner signed in.</li>
         <li>No connections into Jira or other company tools.</li>
       </ul>
       <h2>Service providers</h2>
       <p>
         The app runs on Cloudflare. Payments are handled by Lemon Squeezy, which receives your name, email, billing address
-        and card to process the subscription, under its own privacy policy.
+        and card to process the subscription, under its own privacy policy. Sign-in emails are sent through Resend.
       </p>
       <h2>Your choices</h2>
       <p>
-        Want a room deleted sooner, or have a question? Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        Want a room or your account deleted, or have a question? Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </Shell>
   );
