@@ -1,19 +1,25 @@
 import { useState, type FormEvent } from "react";
 import { navigate } from "../App";
+import { Footer } from "../components/Footer";
 import { Logo } from "../components/Logo";
+import { CardBack, PlayingCard } from "../components/PlayingCard";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { randomRoomName, slugify } from "../lib/identity";
 import { ROOM_ID_PATTERN } from "../../shared/protocol";
 import { BRAND, EDITION } from "../brand";
-import { Footer } from "../components/Footer";
 
 const FEATURES = [
-  ["Story queue", "Paste your backlog and work through it one item at a time."],
-  ["Honest reveals", "Cards stay face down until everyone flips together, so nobody anchors."],
-  ["Results that help", "Average, median, spread and consensus, with the outliers called out."],
-  ["Timer and roles", "Time-box discussion. Product owners can watch without voting."],
-  ["History and CSV", "Every estimate is saved. Export the session for Jira or a sheet."],
-  ["Free, no sign-up", "Share a link or QR code. Works on phones. No ads, ever."],
+  ["Backlog in, estimates out", "Paste a list from Jira or a spreadsheet and work it top to bottom."],
+  ["Blind until the flip", "Cards stay face down until everyone has played, so nobody anchors."],
+  ["Outliers speak first", "The highest and lowest votes are called out, so the talk starts in the right place."],
+  ["A ledger you can export", "Every round is recorded. One click turns the session into a CSV for your tracker."],
+];
+
+const STEPS = [
+  ["Read the story", "Someone reads it out. The team asks questions until it's clear."],
+  ["Play a card", "Everyone picks a card in private. Spectators can watch."],
+  ["Flip together", "All cards turn at once. If they match, that's the estimate."],
+  ["Talk, then replay", "If they don't, the outliers explain and the table votes again."],
 ];
 
 export function Home() {
@@ -38,31 +44,41 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-dvh">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-        <Logo />
-        <ThemeToggle />
+    <div className="min-h-dvh overflow-x-hidden">
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-5 sm:px-8">
+          <Logo />
+          <div className="flex-1" />
+          <a href="#how" className="hidden text-sm text-ink-2 hover:text-ink sm:block">
+            How it works
+          </a>
+          <a href="#features" className="hidden text-sm text-ink-2 hover:text-ink sm:block">
+            Features
+          </a>
+          <ThemeToggle />
+        </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
-        <section className="grid items-center gap-10 py-8 md:grid-cols-[1.1fr_1fr] md:py-14">
+      <main className="mx-auto max-w-6xl px-4 sm:px-8">
+        <section className="grid items-center gap-8 py-12 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div>
-            <p className="mb-3 inline-block rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold tracking-wide text-ink-2 uppercase">
-              Planning poker for agile teams
-            </p>
-            <h1 className="font-display text-4xl leading-[1.05] font-extrabold tracking-tight sm:text-5xl">
-              Estimate together. <span className="text-brand">Flip at once.</span>
+            <p className="eyebrow">Planning poker for agile teams</p>
+            <h1 className="mt-6 font-display text-[56px] leading-[0.95] tracking-[-0.02em] sm:text-[80px] lg:text-[88px]">
+              Estimate together.
+              <br />
+              <em className="text-brand">Flip at once.</em>
             </h1>
-            <p className="mt-4 max-w-md text-lg text-ink-2">
+            <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-2">
               {BRAND} is a {EDITION === "pro" ? "private" : "free"}, real-time planning poker room. Bring your backlog, vote in private, reveal together and
               keep a record of every estimate.
             </p>
 
-            <form onSubmit={create} className="mt-8 rounded-2xl border border-line bg-surface p-4 shadow-sm">
-              <label htmlFor="room-name" className="text-sm font-semibold">
-                Start a room
+            <form onSubmit={create} className="mt-9 max-w-[34rem]">
+              <label htmlFor="room-name" className="sr-only">
+                Room name
               </label>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <div className="flex items-center gap-3 border-b-[1.5px] border-ink pb-2.5">
+                <span className="hidden font-mono text-sm text-ink-3 sm:inline">/r/</span>
                 <input
                   id="room-name"
                   value={name}
@@ -70,20 +86,26 @@ export function Home() {
                     setName(e.target.value);
                     setError("");
                   }}
-                  placeholder="Team name (optional)"
-                  className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 py-2.5 outline-none focus:border-brand"
+                  placeholder="your-team-name"
+                  className="min-w-0 flex-1 bg-transparent text-xl font-medium outline-none placeholder:text-ink-3/60"
                 />
-                <button className="rounded-xl bg-brand px-5 py-2.5 font-semibold text-brand-ink hover:opacity-90">
-                  Create room
+                <button className="shrink-0 rounded-full bg-brand px-5 py-2.5 text-[15px] font-semibold text-white transition hover:brightness-110">
+                  Create room →
                 </button>
               </div>
               <p className="mt-2 text-xs text-ink-3">
-                Use a team name to get the same link every sprint{name.trim() && <>: <b>/r/{slugify(name)}</b></>}
+                {name.trim() ? (
+                  <>
+                    Your link: <b className="font-mono">/r/{slugify(name)}</b>, the same every sprint.
+                  </>
+                ) : (
+                  "Leave it blank for a random name, or use your team name to keep the same link every sprint."
+                )}
               </p>
             </form>
 
-            <form onSubmit={goJoin} className="mt-3 flex flex-col gap-2 px-1 sm:flex-row sm:items-center">
-              <label htmlFor="join" className="text-sm text-ink-2">
+            <form onSubmit={goJoin} className="mt-6 flex max-w-[34rem] items-center gap-2">
+              <label htmlFor="join" className="shrink-0 text-sm text-ink-2">
                 Have a link?
               </label>
               <input
@@ -94,41 +116,58 @@ export function Home() {
                   setError("");
                 }}
                 placeholder="Room name or link"
-                className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+                className="min-w-0 flex-1 rounded-full border border-line bg-surface px-4 py-2 text-sm outline-none focus:border-ink"
               />
-              <button className="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-2">
+              <button className="rounded-full border-[1.5px] border-ink px-4 py-2 text-sm font-semibold hover:bg-ink hover:text-bg">
                 Join
               </button>
             </form>
-            {error && <p className="mt-2 px-1 text-sm text-danger">{error}</p>}
+            {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+
+            <div className="mt-8 flex gap-7 text-sm text-ink-2">
+              {[
+                ["0", "sign-ups"],
+                ["0", "ads"],
+                ["∞", "players"],
+              ].map(([n, l]) => (
+                <span key={l}>
+                  <b className="mr-1 font-display text-2xl font-normal text-ink">{n}</b>
+                  {l}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <HeroTable />
+          <HeroCards />
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-line bg-surface p-5">
-              <h2 className="font-display text-lg font-bold">{title}</h2>
-              <p className="mt-1 text-sm text-ink-2">{body}</p>
+        <section id="features" className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map(([title, body], i) => (
+            <div key={title} className="border-line py-7 sm:px-6 sm:first:pl-0 lg:border-l lg:first:border-l-0">
+              <p className="font-mono text-xs text-brand">0{i + 1}</p>
+              <h2 className="mt-1 font-display text-[28px] leading-tight">{title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
             </div>
           ))}
         </section>
 
-        <section className="mt-12 rounded-2xl border border-line bg-surface p-6">
-          <h2 className="font-display text-xl font-bold">How planning poker works</h2>
-          <ol className="mt-3 grid gap-3 text-sm text-ink-2 sm:grid-cols-4">
-            {[
-              "Read out a story and answer questions about it.",
-              "Everyone picks a card in private.",
-              "Flip all cards at once. If they agree, that's your estimate.",
-              "If not, the highest and lowest explain, then vote again.",
-            ].map((step, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft font-display font-bold text-brand">
-                  {i + 1}
+        <section id="how" className="mt-16 grid gap-10 rounded-[28px] felt p-8 text-[#efe7d6] sm:p-12 lg:grid-cols-[1fr_1.4fr]">
+          <div>
+            <p className="font-mono text-[11px] tracking-[0.18em] text-[#efe7d6]/60 uppercase">How a round works</p>
+            <h2 className="mt-3 font-display text-5xl leading-none sm:text-6xl">
+              Four steps,
+              <br />
+              <em className="text-[#f3d48c]">no anchoring.</em>
+            </h2>
+          </div>
+          <ol className="grid gap-6 sm:grid-cols-2">
+            {STEPS.map(([title, body], i) => (
+              <li key={title} className="flex gap-4">
+                <span className="font-display text-4xl leading-none text-[#f3d48c]">{i + 1}</span>
+                <span>
+                  <b className="block font-display text-2xl font-normal">{title}</b>
+                  <span className="text-sm text-[#efe7d6]/75">{body}</span>
                 </span>
-                <span>{step}</span>
               </li>
             ))}
           </ol>
@@ -140,29 +179,29 @@ export function Home() {
   );
 }
 
-function HeroTable() {
-  const cards = [
-    { v: "5", name: "Priya", rot: -8 },
-    { v: "8", name: "Sam", rot: 4 },
-    { v: "5", name: "Lee", rot: -2 },
-    { v: "5", name: "Noor", rot: 7 },
+function HeroCards() {
+  const fan: [string, number, number, number][] = [
+    ["3", -18, 2, 60],
+    ["5", -7, 18, 20],
+    ["8", 4, 36, 10],
+    ["13", 15, 53, 45],
   ];
   return (
-    <div aria-hidden className="felt relative mx-auto aspect-[4/3] w-full max-w-md rounded-[2rem] p-6 shadow-xl">
-      <div className="absolute inset-3 rounded-[1.6rem] border border-white/10" />
-      <div className="relative flex h-full flex-col items-center justify-center gap-5">
-        <div className="flex gap-3">
-          {cards.map((c) => (
-            <div key={c.name} className="flex flex-col items-center gap-2" style={{ transform: `rotate(${c.rot}deg)` }}>
-              <div className="grid h-24 w-16 place-items-center rounded-xl bg-white font-display text-3xl font-extrabold text-stone-900 shadow-lg sm:h-28 sm:w-20">
-                {c.v}
-              </div>
-              <span className="text-xs font-medium text-white/80">{c.name}</span>
-            </div>
-          ))}
+    <div aria-hidden className="relative mx-auto h-[360px] w-full max-w-[520px] sm:h-[460px]">
+      <div className="absolute inset-0 origin-top-left scale-[0.72] sm:scale-100">
+        {fan.map(([v, r, x, y]) => (
+          <PlayingCard key={v} value={v} size="lg" className="absolute" style={{ left: `${x}%`, top: y, transform: `rotate(${r}deg)` }} />
+        ))}
+        <div className="absolute" style={{ left: "30%", top: 250, transform: "rotate(-2deg)" }}>
+          <CardBack size="lg" />
         </div>
-        <div className="rounded-full bg-white/10 px-4 py-1.5 text-sm text-white">
-          Average 5.8 · Suggested <b className="text-amber-300">5</b>
+        <div
+          className="absolute w-[200px] border border-line bg-surface px-4 py-3 shadow-[0_14px_30px_-18px_rgb(0_0_0/0.45)]"
+          style={{ left: "62%", top: 300, transform: "rotate(3deg)" }}
+        >
+          <p className="eyebrow !text-[10px]">Verdict</p>
+          <p className="font-display text-[34px] leading-tight">8 points</p>
+          <p className="text-xs text-ink-2">avg 7.3 · 2 rounds · consensus</p>
         </div>
       </div>
     </div>

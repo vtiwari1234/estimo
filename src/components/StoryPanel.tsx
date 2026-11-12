@@ -11,8 +11,12 @@ export function StoryPanel({ room, canControl, send }: { room: RoomView; canCont
   const done = room.stories.filter((s) => s.status === "estimated");
 
   return (
-    <aside className="flex min-h-0 flex-col rounded-2xl border border-line bg-surface">
-      <div role="tablist" className="flex border-b border-line p-1.5">
+    <aside className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-line bg-surface">
+      <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
+        <h2 className="font-display text-[32px] leading-none">The ledger</h2>
+        <LedgerTotal room={room} />
+      </div>
+      <div role="tablist" className="mx-4 mb-1 flex gap-1 rounded-full bg-surface-2 p-1">
         {(
           [
             ["queue", `Stories (${queue.length})`],
@@ -24,7 +28,7 @@ export function StoryPanel({ room, canControl, send }: { room: RoomView; canCont
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className="flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-ink-2 aria-selected:bg-surface-2 aria-selected:text-ink"
+            className="flex-1 rounded-full px-3 py-1.5 text-sm font-medium text-ink-2 transition aria-selected:bg-surface aria-selected:text-ink aria-selected:shadow-sm"
           >
             {label}
           </button>
@@ -53,10 +57,11 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ul className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Story queue">
+      <ul className="min-h-0 flex-1 overflow-y-auto py-2" aria-label="Story queue">
         {stories.length === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-ink-3">
-            No stories yet. Add your backlog below, or just vote. Each saved round becomes a quick round.
+          <li className="px-6 py-8 text-center text-sm leading-relaxed text-ink-3">
+            <span className="mb-2 block font-display text-2xl text-ink-2">An empty ledger.</span>
+            Add your backlog below, or just vote. Each saved round becomes a quick round.
           </li>
         )}
         {stories.map((s) => {
@@ -64,7 +69,7 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
           return (
             <li
               key={s.id}
-              className={`group flex items-start gap-2 rounded-xl px-3 py-2 ${current ? "bg-brand-soft" : "hover:bg-surface-2"}`}
+              className={`group flex items-start gap-3 border-t border-line px-5 py-3 first:border-t-0 ${current ? "bg-brand-soft shadow-[inset_3px_0_0_var(--brand)]" : "hover:bg-surface-2"}`}
             >
               <button
                 disabled={!canControl || current}
@@ -72,11 +77,10 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
                 className="min-w-0 flex-1 text-left disabled:cursor-default"
                 title={current ? "Voting on this now" : "Vote on this story"}
               >
-                <span className="block text-sm font-medium break-words">
-                  {current && <span className="mr-1 text-brand">▶</span>}
-                  {s.title}
+                <span className="block text-[15px] break-words">{s.title}</span>
+                <span className="font-mono text-[11px] text-ink-3">
+                  {current ? "on the table" : s.status === "skipped" ? "skipped" : `#${indexOf(s.id) + 1}`}
                 </span>
-                {s.status === "skipped" && <span className="text-xs text-ink-3">Skipped</span>}
               </button>
               {s.link && (
                 <a href={s.link} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline" title="Open link">
@@ -102,7 +106,7 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
       </ul>
 
       {canControl && (
-        <div className="border-t border-line p-3">
+        <div className="border-t border-line p-4">
           {adding ? (
             <div>
               <label htmlFor="stories" className="text-sm font-semibold">
@@ -115,14 +119,14 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
                 onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && add()}
                 rows={4}
                 placeholder={"One per line. Paste from Jira or a sheet.\nPROJ-12 Login with Google https://…\nPROJ-13 Export to CSV"}
-                className="mt-2 w-full resize-y rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-brand"
+                className="mt-2 w-full resize-y rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-ink"
               />
               <div className="mt-2 flex gap-2">
-                <button onClick={add} disabled={!text.trim()} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-ink disabled:opacity-40">
+                <button onClick={add} disabled={!text.trim()} className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-bg disabled:opacity-40">
                   Add {parseStoryLines(text).length || ""}
                 </button>
                 {room.stories.length > 0 && (
-                  <button onClick={() => setAdding(false)} className="rounded-xl px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
+                  <button onClick={() => setAdding(false)} className="rounded-full px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
                     Cancel
                   </button>
                 )}
@@ -130,11 +134,11 @@ function Queue({ room, stories, canControl, send }: { room: RoomView; stories: S
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={() => setAdding(true)} className="flex-1 rounded-xl border border-dashed border-line py-2 text-sm font-semibold text-ink-2 hover:bg-surface-2">
+              <button onClick={() => setAdding(true)} className="flex-1 rounded-full border border-dashed border-ink-3/60 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2">
                 + Add stories
               </button>
               {room.currentStoryId && (
-                <button onClick={() => send({ type: "skip" })} className="rounded-xl border border-line px-3 py-2 text-sm font-semibold text-ink-2 hover:bg-surface-2">
+                <button onClick={() => send({ type: "skip" })} className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2">
                   Skip current
                 </button>
               )}
@@ -153,26 +157,24 @@ function History({ room, stories, canControl, send }: { room: RoomView; stories:
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ul className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Estimated stories">
-        {stories.length === 0 && <li className="px-3 py-6 text-center text-sm text-ink-3">Saved estimates will show up here.</li>}
+      <ul className="min-h-0 flex-1 overflow-y-auto py-2" aria-label="Estimated stories">
+        {stories.length === 0 && <li className="px-6 py-8 text-center text-sm text-ink-3">Saved estimates will show up here.</li>}
         {stories.map((s) => {
           const last = s.rounds[s.rounds.length - 1];
           return (
-            <li key={s.id} className="rounded-xl px-3 py-2 hover:bg-surface-2">
+            <li key={s.id} className="border-t border-line px-5 py-3 first:border-t-0 hover:bg-surface-2">
               <button onClick={() => setOpen(open === s.id ? null : s.id)} className="flex w-full items-start gap-3 text-left" aria-expanded={open === s.id}>
-                <span className="grid h-10 min-w-8 place-items-center rounded-lg bg-brand px-1.5 font-display font-bold text-brand-ink">
-                  {s.estimate}
-                </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium break-words">{s.title}</span>
-                  <span className="block text-xs text-ink-3">
+                  <span className="block text-[15px] break-words">{s.title}</span>
+                  <span className="block font-mono text-[11px] text-ink-3">
                     {s.rounds.length} round{s.rounds.length === 1 ? "" : "s"}
                     {last?.stats.consensus ? " · consensus" : ""}
                   </span>
                 </span>
+                <span className="font-display text-[32px] leading-none">{s.estimate}</span>
               </button>
               {open === s.id && (
-                <div className="mt-2 ml-11 space-y-2 text-xs text-ink-2">
+                <div className="mt-2 space-y-2 text-xs text-ink-2">
                   {s.rounds.map((r, i) => (
                     <div key={i}>
                       <b>Round {i + 1}:</b>{" "}
@@ -200,14 +202,14 @@ function History({ room, stories, canControl, send }: { room: RoomView; stories:
           );
         })}
       </ul>
-      <div className="flex items-center justify-between gap-2 border-t border-line p-3">
-        <span className="text-sm text-ink-2">{numeric.length > 0 && <>Total: <b className="text-ink">{Math.round(total * 10) / 10}</b> points</>}</span>
+      <div className="flex items-center justify-between gap-2 border-t border-line px-5 py-3">
+        <span className="text-sm text-ink-2">{numeric.length > 0 && <>Total: <b className="font-display text-xl font-normal text-ink">{Math.round(total * 10) / 10}</b> points</>}</span>
         <button
           onClick={() => downloadCsv(room)}
           disabled={room.stories.length === 0}
-          className="rounded-xl border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2 disabled:opacity-40"
+          className="text-sm font-semibold text-brand hover:underline disabled:opacity-40"
         >
-          Export CSV
+          Export CSV ↓
         </button>
       </div>
     </div>
@@ -220,4 +222,12 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
       {children}
     </button>
   );
+}
+
+function LedgerTotal({ room }: { room: RoomView }) {
+  const total = room.stories
+    .filter((s) => s.status === "estimated")
+    .map((s) => cardValue(s.estimate ?? ""))
+    .reduce<number>((a, n) => a + (n ?? 0), 0);
+  return total > 0 ? <span className="font-mono text-xs text-ink-3">{Math.round(total * 10) / 10} pts so far</span> : null;
 }

@@ -15,21 +15,21 @@ export function Footer() {
   const year = useCurrentYear();
   if (!OWNER) {
     return (
-      <footer className="border-t border-line px-4 py-8 text-center">
+      <footer className="mx-4 mt-20 border-t border-line py-14 text-center sm:mx-16">
         <p className="text-base font-semibold text-ink-2">No tracking · No ads</p>
-        <p className="mt-2 text-sm text-ink-3">
+        <p className="mt-2 eyebrow">
           © {year} {APP_NAME}
         </p>
       </footer>
     );
   }
   return (
-    <footer className="border-t border-line px-4 py-8 text-center">
-      <blockquote className="font-display text-lg font-semibold text-ink-2 italic">
+    <footer className="mx-4 mt-20 border-t border-line py-14 text-center sm:mx-16">
+      <blockquote className="font-display text-3xl leading-tight italic sm:text-4xl">
         “Coz it's {year} and simple things should be free.”
       </blockquote>
-      <p className="mt-1 text-sm text-ink-3">— {OWNER}</p>
-      <p className="mt-5 text-base font-semibold text-ink-2">No tracking · No ads</p>
+      {OWNER && <p className="mt-2 eyebrow">— {OWNER}</p>}
+      <p className="mt-8 text-base font-semibold text-ink-2">No tracking · No ads</p>
     </footer>
   );
 }
