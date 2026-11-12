@@ -19,7 +19,7 @@ export function Footer() {
         “Coz it's {year} and simple things should be free.”
       </blockquote>
       <p className="mt-1 text-sm text-ink-3">— {OWNER}</p>
-      <p className="mt-4 text-xs text-ink-3">Made with ♥ by {OWNER} · no tracking, no ads</p>
+      <p className="mt-5 text-base font-semibold text-ink-2">No tracking · No ads</p>
     </footer>
   );
 }
