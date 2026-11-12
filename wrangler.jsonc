@@ -11,5 +11,32 @@
     "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // The paid site: same code, its own Worker (agilesizing), rooms and custom domain agilesizing.com.
+  // Built with `npm run build:pro`, which sets CLOUDFLARE_ENV=pro.
+  "env": {
+    "pro": {
+      "name": "agilesizing",
+      "routes": [
+        { "pattern": "agilesizing.com", "custom_domain": true },
+        { "pattern": "www.agilesizing.com", "custom_domain": true }
+      ],
+      "workers_dev": false,
+      // Billing settings. The API key and webhook secret are secrets, set in the
+      // Cloudflare dashboard (Settings → Variables and Secrets), never in this file.
+      "vars": {
+        "EDITION": "pro",
+        "APP_NAME": "AgileSizing",
+        "EMAIL_FROM": "signin@agilesizing.com",
+        "STRIPE_PRICE_MONTHLY": "price_1Ub3roINN0M73a2RDaORymw5",
+        "STRIPE_PRICE_YEARLY": "price_1Ub3uqINN0M73a2R2DRtwuvS"
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+      },
+      // Owner accounts. Created automatically on the first deploy; tables are made on first use.
+      "d1_databases": [{ "binding": "DB", "database_name": "agilesizing" }],
+      "observability": { "enabled": true }
+    }
+  }
 }

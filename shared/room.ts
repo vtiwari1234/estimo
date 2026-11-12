@@ -13,12 +13,21 @@ import {
   MAX_STORY_TITLE,
   REACTIONS,
   type ClientMessage,
+  type Role,
   type RoomState,
   type RoomView,
   type RoundRecord,
   type Story,
 } from "./protocol";
 import { computeStats } from "./stats";
+
+/** Limits that depend on the site and the room's plan, worked out by the server. */
+export interface Policy {
+  /** Most voters online at once, or null for no limit. */
+  maxVoters: number | null;
+}
+
+export const NO_LIMITS: Policy = { maxVoters: null };
 
 export interface ApplyResult {
   error?: string;
@@ -123,6 +132,17 @@ function onlineVoters(state: RoomState, online: Set<string>): string[] {
     .map((p) => p.id);
 }
 
+/** True when one more online voter (besides `actor`) would go over the room's limit. */
+function voterSeatsFull(state: RoomState, online: Set<string>, actor: string, policy: Policy): boolean {
+  if (policy.maxVoters === null) return false;
+  const others = onlineVoters(state, online).filter((id) => id !== actor);
+  return others.length >= policy.maxVoters;
+}
+
+function voterLimitMessage(policy: Policy): string {
+  return `Free rooms allow ${policy.maxVoters} voters at once, so you joined as a spectator. The host can start a free trial to add everyone.`;
+}
+
 function maybeAutoReveal(state: RoomState, online: Set<string>, now: number) {
   if (!state.settings.autoReveal || state.revealed || state.rehidden) return;
   const voters = onlineVoters(state, online);
@@ -145,6 +165,7 @@ export function applyMessage(
   msg: ClientMessage,
   now: number,
   online: Set<string>,
+  policy: Policy = NO_LIMITS,
 ): ApplyResult {
   const ok: ApplyResult = { changed: true };
   const fail = (error: string): ApplyResult => ({ error, changed: false });
@@ -153,7 +174,12 @@ export function applyMessage(
   if (msg.type === "join") {
     const name = cleanName(msg.name);
     if (!name) return fail("Please enter a name.");
-    const role = msg.role === "spectator" ? "spectator" : "voter";
+    let role: Role = msg.role === "spectator" ? "spectator" : "voter";
+    let notice: string | undefined;
+    if (role === "voter" && voterSeatsFull(state, online, actor, policy)) {
+      role = "spectator";
+      notice = voterLimitMessage(policy);
+    }
     if (me) {
       me.name = name;
       me.color = cleanColor(msg.color);
@@ -163,7 +189,8 @@ export function applyMessage(
       state.participants[actor] = { id: actor, name, color: cleanColor(msg.color), role, joinedAt: now };
     }
     if (!state.hostId || !state.participants[state.hostId]) state.hostId = actor;
-    return touch(state, now, ok);
+    if (notice) delete state.votes[actor];
+    return touch(state, now, notice ? { ...ok, error: notice } : ok);
   }
 
   if (!me) return fail("Join the room first.");
@@ -182,6 +209,9 @@ export function applyMessage(
       }
       if (msg.color !== undefined) me.color = cleanColor(msg.color);
       if (msg.role === "voter" || msg.role === "spectator") {
+        if (msg.role === "voter" && me.role !== "voter" && voterSeatsFull(state, online, actor, policy)) {
+          return fail(`Free rooms allow ${policy.maxVoters} voters at once. The host can start a free trial to add more.`);
+        }
         me.role = msg.role;
         if (me.role === "spectator" && !state.revealed) delete state.votes[actor];
       }
@@ -438,7 +468,14 @@ export function handleDisconnect(state: RoomState, online: Set<string>, now: num
  * The view for one person. Hides other people's cards until the round is
  * revealed; the viewer always sees their own card.
  */
-export function toView(state: RoomState, online: Set<string>, now: number, viewer?: string): RoomView {
+export function toView(
+  state: RoomState,
+  online: Set<string>,
+  now: number,
+  viewer?: string,
+  policy: Policy = NO_LIMITS,
+  pro = false,
+): RoomView {
   const votes: Record<string, string | true> = {};
   for (const [id, card] of Object.entries(state.votes)) votes[id] = state.revealed || id === viewer ? card : true;
   return {
@@ -447,5 +484,8 @@ export function toView(state: RoomState, online: Set<string>, now: number, viewe
     online: [...online].filter((id) => state.participants[id]),
     stats: state.revealed ? computeStats(state.votes, currentCards(state)) : null,
     serverNow: now,
+    voterLimit: policy.maxVoters,
+    pro,
+    plan: state.plan ?? null,
   };
 }

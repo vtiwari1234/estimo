@@ -9,9 +9,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
+    "dev:pro": "vite --mode pro",
+    "build:pro": "vite build --mode pro",
+    "deploy:pro": "npm run build:pro && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "node e2e/voting.e2e.mjs"
+    "e2e": "node e2e/voting.e2e.mjs",
+    "e2e:pro": "node e2e/pro.e2e.mjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",

@@ -1,10 +1,25 @@
 import { ROOM_ID_PATTERN } from "../shared/protocol";
+import { addRoom, getAccount, removeRoom } from "./account";
+import { signOut, startSignIn, verifySignIn } from "./auth";
+import { createCheckout, createPortal, handleWebhook } from "./billing";
 
 export { Room } from "./room";
 
 export interface Env {
   ROOMS: DurableObjectNamespace;
   ASSETS: Fetcher;
+  /** "pro" on the paid site; unset on the free site. */
+  EDITION?: string;
+  /** Paid site: accounts database. */
+  DB?: D1Database;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  APP_NAME?: string;
+  DEV_LOGIN_LINKS?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_MONTHLY?: string;
+  STRIPE_PRICE_YEARLY?: string;
 }
 
 export default {
@@ -19,6 +34,21 @@ export default {
       forward.searchParams.set("room", roomId);
       return stub.fetch(new Request(forward, request));
     }
+    if (url.pathname.startsWith("/api/auth/") || url.pathname.startsWith("/api/account")) {
+      if (env.EDITION !== "pro") return new Response("Not found", { status: 404 });
+      const appName = env.APP_NAME || "AgileSizing";
+      if (url.pathname === "/api/auth/start" && request.method === "POST") return startSignIn(request, env, appName);
+      if (url.pathname === "/api/auth/verify" && request.method === "POST") return verifySignIn(request, env);
+      if (url.pathname === "/api/auth/logout" && request.method === "POST") return signOut(request, env);
+      if (url.pathname === "/api/account" && request.method === "GET") return getAccount(request, env);
+      if (url.pathname === "/api/account/rooms" && request.method === "POST") return addRoom(request, env);
+      const del = url.pathname.match(/^\/api\/account\/rooms\/([^/]+)$/);
+      if (del && request.method === "DELETE") return removeRoom(request, env, decodeURIComponent(del[1]).toLowerCase());
+      return new Response("Not found", { status: 404 });
+    }
+    if (url.pathname === "/api/billing/checkout" && request.method === "POST") return createCheckout(request, env);
+    if (url.pathname === "/api/billing/portal" && request.method === "POST") return createPortal(request, env);
+    if (url.pathname === "/api/billing/webhook" && request.method === "POST") return handleWebhook(request, env);
     if (url.pathname === "/api/health") return Response.json({ ok: true });
     if (url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });
     return env.ASSETS.fetch(request);

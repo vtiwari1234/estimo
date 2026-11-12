@@ -5,6 +5,7 @@ import { Hand } from "../components/Hand";
 import { JoinDialog, ProfileForm } from "../components/JoinDialog";
 import { Logo } from "../components/Logo";
 import { Modal } from "../components/Modal";
+import { PlanBar } from "../components/PlanBar";
 import { Results } from "../components/Results";
 import { SettingsDialog } from "../components/SettingsDialog";
 import { ShareDialog } from "../components/ShareDialog";
@@ -129,6 +130,8 @@ export function RoomPage({ roomId }: { roomId: string }) {
             </div>
             <Timer room={room} offset={clockOffset} canControl={canControl} send={send} />
           </section>
+
+          <PlanBar room={room} />
 
           <Table room={room} me={me} />
 

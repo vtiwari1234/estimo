@@ -1,3 +1,4 @@
+import type { Plan } from "./plan";
 import type { RoundStats } from "./stats";
 
 export type Role = "voter" | "spectator";
@@ -64,6 +65,8 @@ export interface RoomState {
   timer: Timer;
   /** Results of quick rounds that were not attached to a story. */
   quickRounds: number;
+  /** Subscription for this room on the paid site; absent on free rooms. */
+  plan?: Plan | null;
 }
 
 /** What a client sees. Votes are hidden until reveal. */
@@ -73,6 +76,10 @@ export interface RoomView extends Omit<RoomState, "votes"> {
   online: string[];
   stats: RoundStats | null;
   serverNow: number;
+  /** Most voters allowed online at once, or null for no limit. */
+  voterLimit: number | null;
+  /** True when a paid plan (or trial) is active for this room. */
+  pro: boolean;
 }
 
 export type ClientMessage =

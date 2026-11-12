@@ -6,7 +6,7 @@ import { CardBack, PlayingCard } from "../components/PlayingCard";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { randomRoomName, slugify } from "../lib/identity";
 import { ROOM_ID_PATTERN } from "../../shared/protocol";
-import { BRAND } from "../brand";
+import { BRAND, EDITION } from "../brand";
 
 const FEATURES = [
   ["Backlog in, estimates out", "Paste a list from Jira or a spreadsheet and work it top to bottom."],
@@ -69,7 +69,7 @@ export function Home() {
               <em className="text-brand">Flip at once.</em>
             </h1>
             <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-2">
-              {BRAND} is a free, real-time planning poker room. Bring your backlog, vote in private, reveal together and
+              {BRAND} is a {EDITION === "pro" ? "private" : "free"}, real-time planning poker room. Bring your backlog, vote in private, reveal together and
               keep a record of every estimate.
             </p>
 

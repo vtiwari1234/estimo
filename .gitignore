@@ -1,7 +1,8 @@
 node_modules
 dist
 .wrangler
-.dev.vars
+.dev.vars*
 *.log
 test-results
 e2e/screenshots
+*.tsbuildinfo
