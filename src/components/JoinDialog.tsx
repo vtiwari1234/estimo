@@ -84,7 +84,7 @@ export function ProfileForm({
 
       <button
         disabled={!name.trim()}
-        className="w-full rounded-xl bg-brand py-3 font-semibold text-brand-ink hover:opacity-90 disabled:opacity-40"
+        className="w-full rounded-full bg-brand py-3 font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
       >
         {submitLabel}
       </button>

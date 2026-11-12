@@ -44,7 +44,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
     return (
       <Modal title="You were removed">
         <p className="text-sm text-ink-2">The host removed you from this room.</p>
-        <a href="/" className="mt-4 inline-block rounded-xl bg-brand px-4 py-2 font-semibold text-brand-ink">
+        <a href="/" className="mt-4 inline-block rounded-full bg-ink px-5 py-2 font-semibold text-bg">
           Back to {BRAND}
         </a>
       </Modal>
@@ -54,7 +54,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
   if (!room) {
     return (
       <div className="grid min-h-dvh place-items-center text-ink-2">
-        <p className="animate-pulse">{status === "reconnecting" ? "Can't reach the room, retrying…" : "Joining room…"}</p>
+        <p className="animate-pulse font-display text-2xl">{status === "reconnecting" ? "Can't reach the room, retrying…" : "Joining room…"}</p>
       </div>
     );
   }
@@ -67,29 +67,38 @@ export function RoomPage({ roomId }: { roomId: string }) {
   const mine = typeof myVote === "string" ? myVote : null;
   const voteCount = Object.keys(room.votes).length;
 
+  const storyIndex = current ? room.stories.findIndex((st) => st.id === current.id) + 1 : 0;
+  const round = room.previousRounds.length + 1;
+
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1240px] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-8">
           <Logo compact />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg leading-tight font-bold">{room.id}</h1>
+          <div className="min-w-0 flex-1 pl-1">
+            <h1 className="truncate font-mono text-sm text-ink-2">/{room.id}</h1>
             <p className="flex items-center gap-1.5 text-xs text-ink-3">
-              <span className="hidden sm:inline">{BRAND} ·</span>
-              <span className={`size-2 rounded-full ${status === "open" ? "bg-emerald-500" : "bg-amber-500"}`} />
+              <span className={`size-1.5 rounded-full ${status === "open" ? "bg-[#3f9b62]" : "bg-accent"}`} />
               {status === "open" ? `${room.online.length} online` : "Reconnecting…"}
+              <span className="hidden sm:inline">· {BRAND}</span>
             </p>
           </div>
-          <button onClick={() => setDialog("share")} className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-brand-ink hover:opacity-90">
-            Invite
+          <button
+            onClick={() => setDialog("settings")}
+            className="hidden rounded-full border-[1.5px] border-ink px-4 py-1.5 text-sm font-semibold hover:bg-ink hover:text-bg sm:block"
+          >
+            Settings
           </button>
           <button
             onClick={() => setDialog("settings")}
             aria-label="Room settings"
             title="Room settings"
-            className="grid size-9 place-items-center rounded-xl border border-line bg-surface hover:bg-surface-2"
+            className="grid size-9 place-items-center rounded-full border border-line bg-surface sm:hidden"
           >
             ⚙
+          </button>
+          <button onClick={() => setDialog("share")} className="rounded-full bg-ink px-4 py-1.5 text-sm font-semibold text-bg hover:opacity-90 sm:py-2">
+            Invite
           </button>
           <ThemeToggle />
           {meP && (
@@ -100,34 +109,36 @@ export function RoomPage({ roomId }: { roomId: string }) {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-3 py-4 sm:px-6 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 space-y-4">
-          <section className="rounded-2xl border border-line bg-surface p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold tracking-wide text-ink-3 uppercase">{current ? "Now estimating" : "Quick round"}</p>
-                <h2 className="font-display text-xl font-bold break-words" data-testid="current-story">
-                  {current ? current.title : "No story selected. Vote on anything."}
-                </h2>
-                {current?.link && (
-                  <a href={current.link} target="_blank" rel="noreferrer" className="text-sm text-brand hover:underline">
-                    Open ticket ↗
-                  </a>
-                )}
-              </div>
-              <Timer room={room} offset={clockOffset} canControl={canControl} send={send} />
+      <main className="mx-auto grid w-full max-w-[1240px] flex-1 gap-6 px-3 py-6 sm:px-8 lg:grid-cols-[1fr_360px]">
+        <div className="min-w-0 space-y-5">
+          <section className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <div className="min-w-0 flex-1">
+              <p className="eyebrow">
+                {current ? `Story ${storyIndex} of ${room.stories.length}` : "Quick round"} · Round {round}
+              </p>
+              <h2 className="mt-2 font-display text-[40px] leading-[0.95] break-words sm:text-[54px]" data-testid="current-story">
+                {current ? current.title : "Vote on anything."}
+              </h2>
+              {current?.link ? (
+                <a href={current.link} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-brand hover:underline">
+                  Open ticket ↗
+                </a>
+              ) : (
+                !current && <p className="mt-2 text-sm text-ink-2">No story selected. Add your backlog to the ledger, or just play a round.</p>
+              )}
             </div>
+            <Timer room={room} offset={clockOffset} canControl={canControl} send={send} />
           </section>
 
           <Table room={room} me={me} />
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {canControl && !room.revealed && (
                 <button
                   onClick={() => send({ type: "reveal" })}
                   disabled={voteCount === 0}
-                  className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-stone-900 shadow-sm hover:opacity-90 disabled:opacity-40"
+                  className="rounded-full bg-brand px-6 py-3 font-semibold text-white shadow-[0_10px_24px_-12px_var(--brand)] transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
                 >
                   Reveal cards
                 </button>
@@ -135,7 +146,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
               {canControl && room.revealed && (
                 <button
                   onClick={() => send({ type: "hide" })}
-                  className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-stone-900 shadow-sm hover:opacity-90"
+                  className="rounded-full border-[1.5px] border-ink px-5 py-3 font-semibold hover:bg-ink hover:text-bg"
                 >
                   Hide cards
                 </button>
@@ -144,16 +155,21 @@ export function RoomPage({ roomId }: { roomId: string }) {
                 <button
                   onClick={() => send({ type: "clear" })}
                   title="Clear everyone's estimates and start this round over"
-                  className="rounded-xl border border-line bg-surface px-4 py-2.5 font-semibold hover:bg-surface-2"
+                  className="rounded-full px-4 py-3 font-semibold text-ink-2 hover:bg-surface-2"
                 >
                   Reset
                 </button>
               )}
               {!canControl && !room.revealed && <p className="text-sm text-ink-3">The host will reveal the cards.</p>}
             </div>
-            <div className="flex gap-1" aria-label="Send a reaction">
+            <div className="flex gap-0.5 rounded-full border border-line bg-surface p-1" aria-label="Send a reaction">
               {REACTIONS.map((e) => (
-                <button key={e} onClick={() => send({ type: "react", emoji: e })} className="grid size-9 place-items-center rounded-xl text-lg hover:bg-surface-2" aria-label={`React ${e}`}>
+                <button
+                  key={e}
+                  onClick={() => send({ type: "react", emoji: e })}
+                  className="grid size-9 place-items-center rounded-full text-lg transition hover:scale-110 hover:bg-surface-2"
+                  aria-label={`React ${e}`}
+                >
                   {e}
                 </button>
               ))}
@@ -163,7 +179,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
           {room.revealed && room.stats && <Results room={room} canControl={canControl} send={send} />}
         </div>
 
-        <div className="lg:sticky lg:top-20 lg:h-[calc(100dvh-7rem-var(--hand,0px))]">
+        <div className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-8rem)] lg:self-start">
           <StoryPanel room={room} canControl={canControl} send={send} />
         </div>
       </main>
@@ -189,7 +205,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
 
       <div className="fixed inset-x-0 top-16 z-50 flex flex-col items-center gap-2 px-4" aria-live="assertive">
         {toasts.map((t) => (
-          <div key={t.key} className="rounded-xl bg-ink px-4 py-2 text-sm text-bg shadow-lg">
+          <div key={t.key} className="rounded-full bg-ink px-5 py-2 text-sm text-bg shadow-lg">
             {t.text}
           </div>
         ))}

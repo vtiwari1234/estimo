@@ -38,7 +38,7 @@ export function ThemeToggle() {
       }}
       title={LABEL[pref]}
       aria-label={LABEL[pref]}
-      className="grid size-9 place-items-center rounded-xl border border-line bg-surface text-ink-2 hover:bg-surface-2"
+      className="grid size-9 place-items-center rounded-full border border-line bg-surface text-ink-2 hover:bg-surface-2"
     >
       <Icon pref={pref} />
     </button>

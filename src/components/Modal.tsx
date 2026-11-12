@@ -16,10 +16,10 @@ export function Modal({ title, onClose, children }: { title: string; onClose?: (
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-line bg-surface p-5 shadow-2xl sm:max-w-md sm:rounded-3xl"
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-[28px] border border-line bg-surface p-6 shadow-2xl sm:max-w-md sm:rounded-[28px]"
       >
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="font-display text-xl font-bold">{title}</h2>
+          <h2 className="font-display text-[32px] leading-none">{title}</h2>
           {onClose && (
             <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-lg text-ink-3 hover:bg-surface-2">
               ✕
