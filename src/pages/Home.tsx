@@ -62,15 +62,15 @@ export function Home() {
       <main className="mx-auto max-w-6xl px-4 sm:px-8">
         <section className="grid items-center gap-8 py-12 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div>
-            <p className="eyebrow">Nº 01 — Planning poker, done properly</p>
-            <h1 className="mt-6 font-display text-[64px] leading-[0.92] tracking-[-0.02em] sm:text-[96px] lg:text-[112px]">
-              Every voice,
+            <p className="eyebrow">Planning poker for agile teams</p>
+            <h1 className="mt-6 font-display text-[56px] leading-[0.95] tracking-[-0.02em] sm:text-[80px] lg:text-[88px]">
+              Estimate together.
               <br />
-              <em className="text-brand">one estimate.</em>
+              <em className="text-brand">Flip at once.</em>
             </h1>
             <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-2">
-              Everyone picks a card in private, everyone flips at once, and every voice counts the same. A calm,
-              friendly way to agree on the work. {BRAND} is free, real-time and needs no sign-up.
+              {BRAND} is a free, real-time planning poker room. Bring your backlog, vote in private, reveal together and
+              keep a record of every estimate.
             </p>
 
             <form onSubmit={create} className="mt-9 max-w-[34rem]">
