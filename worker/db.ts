@@ -10,7 +10,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sessions (id_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS subscriptions (
      user_id TEXT PRIMARY KEY, provider_id TEXT NOT NULL, status TEXT NOT NULL, interval TEXT NOT NULL,
-     trial_ends_at INTEGER, renews_at INTEGER, ends_at INTEGER, portal_url TEXT, updated_at INTEGER NOT NULL)`,
+     trial_ends_at INTEGER, renews_at INTEGER, ends_at INTEGER, customer_id TEXT, updated_at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS pro_rooms (room_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, added_at INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS pro_rooms_user ON pro_rooms (user_id)`,
 ];

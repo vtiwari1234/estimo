@@ -88,9 +88,9 @@ function Terms() {
       <h2>Paid plans</h2>
       <p>
         Pro is a subscription ({PRICES.monthly.label} or {PRICES.yearly.label}) on the account of the person who pays, and covers
-        up to {MAX_PRO_ROOMS} rooms they choose. It starts with a {TRIAL_DAYS}-day free trial. Payments are processed by our reseller, Lemon Squeezy, which is the merchant of record and handles billing,
-        taxes and receipts. Subscriptions renew automatically until cancelled. You can cancel any time from your account page
-        or the link in your receipt email, and Pro stays active until the end of the period you paid for.
+        up to {MAX_PRO_ROOMS} rooms they choose. It starts with a {TRIAL_DAYS}-day free trial. Payments are processed through Stripe Managed Payments: Stripe's Link is the merchant of record (your
+        statement and receipt say the purchase was sold through Link) and handles billing, taxes and receipts. Subscriptions renew automatically until cancelled. You can cancel any time from your account page
+        or through Link, and Pro stays active until the end of the period you paid for.
       </p>
       <h2>Acceptable use</h2>
       <p>Don't use {APP_NAME} for anything illegal, to harass people, or to attack or overload the service.</p>
@@ -126,8 +126,8 @@ function Privacy() {
       </ul>
       <h2>Service providers</h2>
       <p>
-        The app runs on Cloudflare. Payments are handled by Lemon Squeezy, which receives your name, email, billing address
-        and card to process the subscription, under its own privacy policy. Sign-in emails are sent through Resend.
+        The app runs on Cloudflare. Payments are handled by Stripe and its Link service, which receive your name, email, billing address
+        and card to process the subscription, under their own privacy policies. Sign-in emails are sent through Resend.
       </p>
       <h2>Your choices</h2>
       <p>

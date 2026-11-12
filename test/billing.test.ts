@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { FREE_VOTER_LIMIT, isPro, planFromWebhook, type Plan } from "../shared/plan";
+import { FREE_VOTER_LIMIT, isPro, planFromStripe, type Plan } from "../shared/plan";
 import { applyMessage, createRoom, toView } from "../shared/room";
 import { signatureValid } from "../worker/billing";
 
@@ -63,7 +63,6 @@ function plan(over: Partial<Plan>): Plan {
     renewsAt: null,
     endsAt: null,
     subscriptionId: "1",
-    portalUrl: "https://portal",
     updatedAt: NOW,
     ...over,
   };
@@ -83,58 +82,77 @@ describe("plans", () => {
     expect(isPro(plan({ status: "cancelled", endsAt: NOW - 1000 }), NOW)).toBe(false);
   });
 
-  it("reads a Lemon Squeezy subscription webhook", () => {
-    const update = planFromWebhook(
-      {
-        meta: { event_name: "subscription_created", custom_data: { user_id: "u1", room_id: "team-falcon" } },
-        data: {
-          type: "subscriptions",
-          id: "123",
-          attributes: {
-            status: "on_trial",
-            variant_name: "Yearly",
-            trial_ends_at: "2026-11-26T00:00:00.000000Z",
-            renews_at: "2026-11-26T00:00:00.000000Z",
-            ends_at: null,
-            urls: { customer_portal: "https://agilesizing.lemonsqueezy.com/billing" },
-          },
+  const T = Math.floor(NOW / 1000);
+  function event(sub: Record<string, unknown>, type = "customer.subscription.created") {
+    return {
+      type,
+      created: T,
+      data: {
+        object: {
+          id: "sub_1",
+          customer: "cus_1",
+          status: "trialing",
+          trial_end: T + 14 * 86400,
+          cancel_at: null,
+          cancel_at_period_end: false,
+          metadata: { user_id: "u1", room_id: "team-falcon" },
+          items: { data: [{ current_period_end: T + 14 * 86400, price: { recurring: { interval: "year" } } }] },
+          ...sub,
         },
       },
-      NOW,
-    );
+    };
+  }
+
+  it("reads a Stripe subscription event", () => {
+    const update = planFromStripe(event({}));
     expect(update?.userId).toBe("u1");
     expect(update?.roomId).toBe("team-falcon");
-    expect(update?.plan).toMatchObject({ status: "on_trial", interval: "yearly", subscriptionId: "123" });
-    expect(update?.plan.trialEndsAt).toBe(Date.parse("2026-11-26T00:00:00Z"));
+    expect(update?.customerId).toBe("cus_1");
+    expect(update?.plan).toMatchObject({ status: "on_trial", interval: "yearly", subscriptionId: "sub_1", updatedAt: NOW - (NOW % 1000) });
+    expect(update?.plan.trialEndsAt).toBe((T + 14 * 86400) * 1000);
+  });
+
+  it("maps Stripe statuses, including a pending cancel", () => {
+    expect(planFromStripe(event({ status: "active" }))?.plan.status).toBe("active");
+    expect(planFromStripe(event({ status: "past_due" }))?.plan.status).toBe("past_due");
+    expect(planFromStripe(event({ status: "canceled" }, "customer.subscription.deleted"))?.plan.status).toBe("expired");
+    expect(planFromStripe(event({ status: "incomplete" }))?.plan.status).toBe("expired");
+    const cancelling = planFromStripe(event({ status: "active", cancel_at_period_end: true }))?.plan;
+    expect(cancelling?.status).toBe("cancelled");
+    expect(cancelling?.endsAt).toBe((T + 14 * 86400) * 1000);
+    expect(isPro(cancelling, NOW)).toBe(true);
   });
 
   it("ignores other events and subscriptions without an account", () => {
-    expect(planFromWebhook({ meta: { event_name: "order_created" }, data: { type: "orders" } }, NOW)).toBeNull();
-    expect(planFromWebhook({ meta: { event_name: "subscription_created" }, data: { type: "subscriptions" } }, NOW)).toBeNull();
-    expect(
-      planFromWebhook({ meta: { event_name: "subscription_updated", custom_data: { room_id: "x" } }, data: { type: "subscriptions" } }, NOW),
-    ).toBeNull();
+    expect(planFromStripe({ type: "invoice.paid", data: { object: {} } })).toBeNull();
+    expect(planFromStripe(event({ metadata: {} }))).toBeNull();
+    expect(planFromStripe(null)).toBeNull();
   });
 
-  it("only shows the billing portal link to the host", () => {
+  it("shows rooms their plan", () => {
     const room = createRoom("team", NOW);
-    room.hostId = "host";
     room.plan = plan({});
-    expect(toView(room, new Set(), NOW, "host").plan?.portalUrl).toBe("https://portal");
-    expect(toView(room, new Set(), NOW, "guest").plan?.portalUrl).toBeNull();
+    expect(toView(room, new Set(), NOW, "guest").plan?.status).toBe("active");
   });
 });
 
 describe("webhook signature", () => {
-  const body = '{"meta":{"event_name":"subscription_created"}}';
-  const good = createHmac("sha256", "s3cret").update(body).digest("hex");
+  const body = '{"type":"customer.subscription.created"}';
+  const t = Math.floor(NOW / 1000);
+  const sign = (secret: string, ts = t) => `t=${ts},v1=${createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex")}`;
 
-  it("accepts the provider's HMAC and rejects anything else", async () => {
-    expect(await signatureValid(body, good, "s3cret")).toBe(true);
-    expect(await signatureValid(body, good, "other")).toBe(false);
-    expect(await signatureValid(body + " ", good, "s3cret")).toBe(false);
-    expect(await signatureValid(body, null, "s3cret")).toBe(false);
-    expect(await signatureValid(body, good, "")).toBe(false);
+  it("accepts Stripe's signature and rejects anything else", async () => {
+    expect(await signatureValid(body, sign("whsec_x"), "whsec_x", NOW)).toBe(true);
+    expect(await signatureValid(body, `v0=abc,${sign("whsec_x")}`, "whsec_x", NOW)).toBe(true);
+    expect(await signatureValid(body, sign("other"), "whsec_x", NOW)).toBe(false);
+    expect(await signatureValid(body + " ", sign("whsec_x"), "whsec_x", NOW)).toBe(false);
+    expect(await signatureValid(body, null, "whsec_x", NOW)).toBe(false);
+    expect(await signatureValid(body, sign("whsec_x"), "", NOW)).toBe(false);
+    expect(await signatureValid(body, "nope", "whsec_x", NOW)).toBe(false);
+  });
+
+  it("rejects old signatures so webhooks can't be replayed", async () => {
+    expect(await signatureValid(body, sign("whsec_x", t - 600), "whsec_x", NOW)).toBe(false);
   });
 });
 

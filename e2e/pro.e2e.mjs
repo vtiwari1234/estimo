@@ -1,12 +1,12 @@
 // Paid-site check: free rooms seat 4 voters; the owner signs in by email, and a signed
 // subscription webhook makes their rooms Pro.
-// Run `npm run dev:pro` with LS_WEBHOOK_SECRET=testsecret and DEV_LOGIN_LINKS=1 in .dev.vars.pro, then: npm run e2e:pro
+// Run `npm run dev:pro` with STRIPE_WEBHOOK_SECRET=testsecret and DEV_LOGIN_LINKS=1 in .dev.vars.pro, then: npm run e2e:pro
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:5173";
-const SECRET = process.env.LS_WEBHOOK_SECRET ?? "testsecret";
+const SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "testsecret";
 const SHOTS = process.env.SHOTS;
 const room = `pro-${Date.now().toString(36)}`;
 const browser = await chromium.launch();
@@ -23,8 +23,9 @@ async function join(name) {
 
 async function webhook(body) {
   const raw = JSON.stringify(body);
-  const sig = createHmac("sha256", SECRET).update(raw).digest("hex");
-  return fetch(`${BASE}/api/billing/webhook`, { method: "POST", headers: { "X-Signature": sig }, body: raw });
+  const t = Math.floor(Date.now() / 1000);
+  const sig = createHmac("sha256", SECRET).update(`${t}.${raw}`).digest("hex");
+  return fetch(`${BASE}/api/billing/webhook`, { method: "POST", headers: { "Stripe-Signature": `t=${t},v1=${sig}` }, body: raw });
 }
 
 try {
@@ -52,27 +53,29 @@ try {
   await ana.getByText(/Payments aren't set up yet/).waitFor(); // no store ids on a dev machine
   const { id: userId } = await ana.evaluate(() => fetch("/api/account").then((r) => r.json()));
 
-  const bad = await fetch(`${BASE}/api/billing/webhook`, { method: "POST", headers: { "X-Signature": "nope" }, body: "{}" });
+  const bad = await fetch(`${BASE}/api/billing/webhook`, { method: "POST", headers: { "Stripe-Signature": "t=1,v1=nope" }, body: "{}" });
   assert.equal(bad.status, 401, "unsigned webhooks are rejected");
 
+  const trialEnd = Math.floor(Date.now() / 1000) + 14 * 86400;
   const res = await webhook({
-    meta: { event_name: "subscription_created", custom_data: { user_id: userId, room_id: room } },
+    type: "customer.subscription.created",
+    created: Math.floor(Date.now() / 1000),
     data: {
-      type: "subscriptions",
-      id: "42",
-      attributes: {
-        status: "on_trial",
-        variant_name: "Yearly",
-        trial_ends_at: new Date(Date.now() + 14 * 864e5).toISOString(),
-        renews_at: new Date(Date.now() + 14 * 864e5).toISOString(),
-        urls: { customer_portal: "https://example.com/portal" },
+      object: {
+        id: "sub_42",
+        customer: "cus_42",
+        status: "trialing",
+        trial_end: trialEnd,
+        cancel_at_period_end: false,
+        metadata: { user_id: userId, room_id: room },
+        items: { data: [{ current_period_end: trialEnd, price: { recurring: { interval: "year" } } }] },
       },
     },
   });
   assert.equal(res.status, 200);
   await ana.reload();
   await ana.getByText(/Free trial until/).waitFor();
-  await ana.getByRole("link", { name: /Manage billing/ }).waitFor();
+  await ana.getByRole("button", { name: /Manage billing/ }).waitFor();
   await ana.getByTestId("pro-rooms").getByText(`/${room}`).waitFor();
 
   // A typo'd room can be swapped out.
@@ -86,7 +89,7 @@ try {
 
   // The room itself is Pro now; people in it see the trial and no billing link.
   await pages[1].getByText(/Free trial until/).waitFor();
-  assert.equal(await pages[1].getByRole("link", { name: /Manage billing/ }).count(), 0, "billing link stays on the account page");
+  assert.equal(await pages[1].getByRole("button", { name: /Manage billing/ }).count(), 0, "billing link stays on the account page");
 
   await eve.getByRole("button", { name: "Your profile" }).click();
   await eve.getByRole("button", { name: /^Voter/ }).click();

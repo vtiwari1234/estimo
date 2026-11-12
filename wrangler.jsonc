@@ -28,9 +28,8 @@
         "EDITION": "pro",
         "APP_NAME": "AgileSizing",
         "EMAIL_FROM": "signin@agilesizing.com",
-        "LS_STORE_ID": "",
-        "LS_VARIANT_MONTHLY": "",
-        "LS_VARIANT_YEARLY": ""
+        "STRIPE_PRICE_MONTHLY": "",
+        "STRIPE_PRICE_YEARLY": ""
       },
       "durable_objects": {
         "bindings": [{ "name": "ROOMS", "class_name": "Room" }]

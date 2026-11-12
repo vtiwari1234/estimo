@@ -1,29 +1,53 @@
-import { planFromWebhook, type Interval } from "../shared/plan";
+import { TRIAL_DAYS, planFromStripe, type Interval } from "../shared/plan";
 import { ROOM_ID_PATTERN } from "../shared/protocol";
-import { saveSubscription, subscriptionOf } from "./account";
+import { customerOf, saveSubscription, subscriptionOf } from "./account";
 import { currentUser } from "./auth";
 import type { Env } from "./index";
 
 /**
- * Lemon Squeezy billing for the paid site. All provider-specific code lives
- * here, so moving to another provider means replacing this file.
+ * Stripe billing for the paid site, through Stripe Managed Payments (Stripe is
+ * the merchant of record and handles sales tax/VAT). All provider-specific code
+ * lives here, so moving to another provider means replacing this file.
  *
- * Settings (Cloudflare → the Worker → Settings → Variables and Secrets):
- *   LS_API_KEY           secret  API key (Lemon Squeezy → Settings → API)
- *   LS_WEBHOOK_SECRET    secret  signing secret of the webhook
- *   LS_STORE_ID          var     store id
- *   LS_VARIANT_MONTHLY   var     variant id of the $4/month plan
- *   LS_VARIANT_YEARLY    var     variant id of the $36/year plan
+ * Settings (Cloudflare → the agilesizing Worker → Settings → Variables and Secrets):
+ *   STRIPE_SECRET_KEY      secret  secret API key (Stripe → Developers → API keys)
+ *   STRIPE_WEBHOOK_SECRET  secret  signing secret (whsec_…) of the webhook endpoint
+ *   STRIPE_PRICE_MONTHLY   var     price id (price_…) of the $4/month plan, in wrangler.jsonc
+ *   STRIPE_PRICE_YEARLY    var     price id (price_…) of the $36/year plan, in wrangler.jsonc
+ *
+ * Webhook endpoint: https://agilesizing.com/api/billing/webhook with events
+ * customer.subscription.created, .updated and .deleted.
  */
 
-const API = "https://api.lemonsqueezy.com/v1";
+const API = "https://api.stripe.com/v1";
+const API_VERSION = "2025-03-31.basil";
+/** Webhooks older than this are rejected, so a captured one can't be replayed later. */
+const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, { status });
 }
 
 export function billingConfigured(env: Env): boolean {
-  return Boolean(env.LS_API_KEY && env.LS_STORE_ID && env.LS_VARIANT_MONTHLY && env.LS_VARIANT_YEARLY);
+  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PRICE_MONTHLY && env.STRIPE_PRICE_YEARLY);
+}
+
+/** Calls the Stripe API with a form-encoded body. */
+async function stripe<T>(env: Env, path: string, params: Record<string, string>): Promise<T | null> {
+  const res = await fetch(`${API}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Version": API_VERSION,
+    },
+    body: new URLSearchParams(params),
+  });
+  if (!res.ok) {
+    console.error("stripe", path, res.status, await res.text());
+    return null;
+  }
+  return (await res.json()) as T;
 }
 
 /** POST /api/billing/checkout {interval, roomId?} → {url} of a hosted checkout page. Needs a signed-in owner. */
@@ -43,41 +67,44 @@ export async function createCheckout(request: Request, env: Env): Promise<Respon
     return json({ error: "Bad request." }, 400);
   }
   const roomId = String(body.roomId ?? "").toLowerCase();
-  const custom: Record<string, string> = { user_id: user.id };
-  if (ROOM_ID_PATTERN.test(roomId)) custom.room_id = roomId;
   const interval: Interval = body.interval === "yearly" ? "yearly" : "monthly";
-  const variantId = interval === "yearly" ? env.LS_VARIANT_YEARLY : env.LS_VARIANT_MONTHLY;
   const origin = new URL(request.url).origin;
+  const customer = await customerOf(env, user.id);
 
-  const res = await fetch(`${API}/checkouts`, {
-    method: "POST",
-    headers: {
-      Accept: "application/vnd.api+json",
-      "Content-Type": "application/vnd.api+json",
-      Authorization: `Bearer ${env.LS_API_KEY}`,
-    },
-    body: JSON.stringify({
-      data: {
-        type: "checkouts",
-        attributes: {
-          checkout_data: { email: user.email, custom },
-          product_options: { redirect_url: `${origin}/account?welcome=1` },
-        },
-        relationships: {
-          store: { data: { type: "stores", id: String(env.LS_STORE_ID) } },
-          variant: { data: { type: "variants", id: String(variantId) } },
-        },
-      },
-    }),
+  const params: Record<string, string> = {
+    mode: "subscription",
+    "managed_payments[enabled]": "true",
+    "line_items[0][price]": String(interval === "yearly" ? env.STRIPE_PRICE_YEARLY : env.STRIPE_PRICE_MONTHLY),
+    "line_items[0][quantity]": "1",
+    "subscription_data[metadata][user_id]": user.id,
+    client_reference_id: user.id,
+    success_url: `${origin}/account?welcome=1`,
+    cancel_url: `${origin}/account${ROOM_ID_PATTERN.test(roomId) ? `?room=${roomId}` : ""}`,
+  };
+  if (ROOM_ID_PATTERN.test(roomId)) params["subscription_data[metadata][room_id]"] = roomId;
+  // One free trial per account: someone coming back after their plan ended pays from day one.
+  if (!existing) params["subscription_data[trial_period_days]"] = String(TRIAL_DAYS);
+  if (customer) params.customer = customer;
+  else params.customer_email = user.email;
+
+  const session = await stripe<{ url?: string }>(env, "/checkout/sessions", params);
+  if (!session?.url) return json({ error: "Couldn't start checkout. Please try again." }, 502);
+  return json({ url: session.url });
+}
+
+/** POST /api/billing/portal → {url} of Stripe's page to change card, plan, cancel and get invoices. */
+export async function createPortal(request: Request, env: Env): Promise<Response> {
+  if (env.EDITION !== "pro") return json({ error: "Not available." }, 404);
+  const user = await currentUser(request, env);
+  if (!user) return json({ error: "Please sign in." }, 401);
+  const customer = await customerOf(env, user.id);
+  if (!customer || !env.STRIPE_SECRET_KEY) return json({ error: "No billing details yet." }, 404);
+  const portal = await stripe<{ url?: string }>(env, "/billing_portal/sessions", {
+    customer,
+    return_url: `${new URL(request.url).origin}/account`,
   });
-  if (!res.ok) {
-    console.error("checkout failed", res.status, await res.text());
-    return json({ error: "Couldn't start checkout. Please try again." }, 502);
-  }
-  const data = (await res.json()) as { data?: { attributes?: { url?: string } } };
-  const url = data.data?.attributes?.url;
-  if (!url) return json({ error: "Couldn't start checkout. Please try again." }, 502);
-  return json({ url });
+  if (!portal?.url) return json({ error: "Couldn't open billing. Please try again." }, 502);
+  return json({ url: portal.url });
 }
 
 /** Constant-time comparison of two hex strings. */
@@ -88,32 +115,43 @@ function sameHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export async function signatureValid(raw: string, signature: string | null, secret: string): Promise<boolean> {
-  if (!signature || !secret) return false;
+/** Checks a Stripe-Signature header ("t=…,v1=…"): HMAC-SHA256 of "t.body", within the time tolerance. */
+export async function signatureValid(raw: string, header: string | null, secret: string, nowMs = Date.now()): Promise<boolean> {
+  if (!header || !secret) return false;
+  let timestamp = "";
+  const signatures: string[] = [];
+  for (const part of header.split(",")) {
+    const [k, v] = part.trim().split("=", 2);
+    if (k === "t") timestamp = v ?? "";
+    if (k === "v1" && v) signatures.push(v.toLowerCase());
+  }
+  const t = Number(timestamp);
+  if (!timestamp || !Number.isFinite(t) || signatures.length === 0) return false;
+  if (Math.abs(nowMs - t * 1000) > SIGNATURE_TOLERANCE_MS) return false;
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
     "sign",
   ]);
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw));
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${raw}`));
   const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return sameHex(hex, signature.trim().toLowerCase());
+  return signatures.some((s) => sameHex(hex, s));
 }
 
-/** POST /api/billing/webhook from Lemon Squeezy: verifies it, then updates the owner's plan and rooms. */
+/** POST /api/billing/webhook from Stripe: verifies it, then updates the owner's plan and rooms. */
 export async function handleWebhook(request: Request, env: Env): Promise<Response> {
   if (env.EDITION !== "pro") return new Response("Not found", { status: 404 });
   const raw = await request.text();
-  if (!(await signatureValid(raw, request.headers.get("X-Signature"), env.LS_WEBHOOK_SECRET ?? ""))) {
+  if (!(await signatureValid(raw, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET ?? ""))) {
     return new Response("Invalid signature", { status: 401 });
   }
-  let body: unknown;
+  let event: unknown;
   try {
-    body = JSON.parse(raw);
+    event = JSON.parse(raw);
   } catch {
     return new Response("Bad JSON", { status: 400 });
   }
-  const update = planFromWebhook(body, Date.now());
-  // Acknowledge events we don't use, so the provider doesn't keep retrying them.
+  const update = planFromStripe(event);
+  // Acknowledge events we don't use, so Stripe doesn't keep retrying them.
   if (!update) return new Response("Ignored", { status: 200 });
-  const ok = await saveSubscription(env, update.userId, update.plan, update.roomId);
+  const ok = await saveSubscription(env, update.userId, update.plan, update.roomId, update.customerId);
   return new Response(ok ? "OK" : "Saved; some rooms not updated", { status: ok ? 200 : 500 });
 }

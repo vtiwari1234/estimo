@@ -13,8 +13,6 @@ export interface Plan {
   endsAt: number | null;
   /** Payment provider's subscription id, for support. */
   subscriptionId: string;
-  /** Link to the provider's billing portal. Only sent to the host. */
-  portalUrl: string | null;
   updatedAt: number;
 }
 
@@ -24,7 +22,7 @@ export const FREE_VOTER_LIMIT = 4;
 /** Rooms one subscription can make Pro. The owner can swap them any time. */
 export const MAX_PRO_ROOMS = 3;
 
-/** Trial length offered at checkout, in days. Configured on the product in the payment provider. */
+/** Trial length offered at checkout, in days. */
 export const TRIAL_DAYS = 14;
 
 export const PRICES = {
@@ -48,44 +46,76 @@ export function isPro(plan: Plan | null | undefined, now: number): boolean {
   }
 }
 
-function time(value: unknown): number | null {
-  if (typeof value !== "string" || !value) return null;
-  const t = Date.parse(value);
-  return Number.isFinite(t) ? t : null;
+function seconds(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value * 1000 : null;
 }
 
-const STATUSES: PlanStatus[] = ["on_trial", "active", "paused", "past_due", "unpaid", "cancelled", "expired"];
+/** A Stripe subscription object, as far as we read it. */
+interface StripeSubscription {
+  id?: unknown;
+  customer?: unknown;
+  status?: unknown;
+  trial_end?: unknown;
+  cancel_at?: unknown;
+  cancel_at_period_end?: unknown;
+  ended_at?: unknown;
+  metadata?: { user_id?: unknown; room_id?: unknown };
+  items?: { data?: { current_period_end?: unknown; price?: { recurring?: { interval?: unknown } } }[] };
+}
 
 /**
- * Reads a Lemon Squeezy subscription webhook body into the paying account and
+ * Reads a Stripe customer.subscription.* event into the paying account and
  * plan, plus the room checkout was started from (if any). Returns null for
  * events that aren't about a subscription tied to an account.
  */
-export function planFromWebhook(body: unknown, now: number): { userId: string; roomId: string | null; plan: Plan } | null {
-  const b = body as {
-    meta?: { event_name?: string; custom_data?: { user_id?: unknown; room_id?: unknown } };
-    data?: { type?: string; id?: unknown; attributes?: Record<string, unknown> };
-  };
-  if (!b?.meta?.event_name?.startsWith("subscription_") || b.data?.type !== "subscriptions") return null;
-  const userId = b.meta.custom_data?.user_id;
-  const roomId = b.meta.custom_data?.room_id;
-  const a = b.data.attributes ?? {};
-  if (typeof userId !== "string" || !userId) return null;
-  const status = STATUSES.includes(a.status as PlanStatus) ? (a.status as PlanStatus) : "expired";
-  const urls = (a.urls ?? {}) as { customer_portal?: unknown };
-  const variant = String(a.variant_name ?? "").toLowerCase();
+export function planFromStripe(
+  event: unknown,
+): { userId: string; roomId: string | null; customerId: string | null; plan: Plan } | null {
+  const e = event as { type?: unknown; created?: unknown; data?: { object?: StripeSubscription } };
+  if (typeof e?.type !== "string" || !e.type.startsWith("customer.subscription.")) return null;
+  const sub = e.data?.object;
+  const userId = sub?.metadata?.user_id;
+  if (!sub || typeof userId !== "string" || !userId) return null;
+  const roomId = sub.metadata?.room_id;
+  const item = sub.items?.data?.[0];
+  const periodEnd = seconds(item?.current_period_end);
+  const cancelAt = seconds(sub.cancel_at) ?? (sub.cancel_at_period_end === true ? periodEnd : null);
+
+  let status: PlanStatus;
+  switch (sub.status) {
+    case "trialing":
+      status = "on_trial";
+      break;
+    case "active":
+      status = "active";
+      break;
+    case "past_due":
+      status = "past_due";
+      break;
+    case "unpaid":
+      status = "unpaid";
+      break;
+    case "paused":
+      status = "paused";
+      break;
+    default: // canceled, incomplete, incomplete_expired
+      status = "expired";
+  }
+  // Still running but set to stop: Pro keeps working until then.
+  if ((status === "on_trial" || status === "active") && cancelAt !== null) status = "cancelled";
+
   return {
     userId,
     roomId: typeof roomId === "string" && roomId ? roomId : null,
+    customerId: typeof sub.customer === "string" ? sub.customer : null,
     plan: {
       status,
-      interval: variant.includes("year") ? "yearly" : "monthly",
-      trialEndsAt: time(a.trial_ends_at),
-      renewsAt: time(a.renews_at),
-      endsAt: time(a.ends_at),
-      subscriptionId: String(b.data.id ?? ""),
-      portalUrl: typeof urls.customer_portal === "string" ? urls.customer_portal : null,
-      updatedAt: now,
+      interval: item?.price?.recurring?.interval === "year" ? "yearly" : "monthly",
+      trialEndsAt: status === "on_trial" || status === "cancelled" ? seconds(sub.trial_end) : null,
+      renewsAt: status === "cancelled" || status === "expired" ? null : periodEnd,
+      endsAt: status === "cancelled" ? cancelAt : seconds(sub.ended_at),
+      subscriptionId: String(sub.id ?? ""),
+      updatedAt: seconds(e.created) ?? Date.now(),
     },
   };
 }

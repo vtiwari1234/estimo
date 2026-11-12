@@ -486,7 +486,6 @@ export function toView(
     serverNow: now,
     voterLimit: policy.maxVoters,
     pro,
-    // The billing portal link lets someone manage the subscription, so only the host gets it.
-    plan: state.plan ? { ...state.plan, portalUrl: viewer && viewer === state.hostId ? state.plan.portalUrl : null } : null,
+    plan: state.plan ?? null,
   };
 }

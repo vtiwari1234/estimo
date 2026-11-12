@@ -1,7 +1,7 @@
 import { ROOM_ID_PATTERN } from "../shared/protocol";
 import { addRoom, getAccount, removeRoom } from "./account";
 import { signOut, startSignIn, verifySignIn } from "./auth";
-import { createCheckout, handleWebhook } from "./billing";
+import { createCheckout, createPortal, handleWebhook } from "./billing";
 
 export { Room } from "./room";
 
@@ -16,11 +16,10 @@ export interface Env {
   EMAIL_FROM?: string;
   APP_NAME?: string;
   DEV_LOGIN_LINKS?: string;
-  LS_API_KEY?: string;
-  LS_WEBHOOK_SECRET?: string;
-  LS_STORE_ID?: string;
-  LS_VARIANT_MONTHLY?: string;
-  LS_VARIANT_YEARLY?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_MONTHLY?: string;
+  STRIPE_PRICE_YEARLY?: string;
 }
 
 export default {
@@ -48,6 +47,7 @@ export default {
       return new Response("Not found", { status: 404 });
     }
     if (url.pathname === "/api/billing/checkout" && request.method === "POST") return createCheckout(request, env);
+    if (url.pathname === "/api/billing/portal" && request.method === "POST") return createPortal(request, env);
     if (url.pathname === "/api/billing/webhook" && request.method === "POST") return handleWebhook(request, env);
     if (url.pathname === "/api/health") return Response.json({ ok: true });
     if (url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });

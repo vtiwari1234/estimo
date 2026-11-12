@@ -10,6 +10,7 @@ interface Account {
   email: string;
   plan: Plan | null;
   pro: boolean;
+  canManageBilling: boolean;
   rooms: string[];
   maxRooms: number;
 }
@@ -138,12 +139,36 @@ function StartPlan({ room }: { room: string }) {
       <button onClick={start} disabled={busy} className={`mt-4 w-full ${primary}`}>
         {busy ? "Opening checkout…" : `Start ${TRIAL_DAYS}-day free trial`}
       </button>
-      <p className="mt-3 text-center text-xs text-ink-3">Secure checkout by Lemon Squeezy, our reseller.</p>
+      <p className="mt-3 text-center text-xs text-ink-3">Secure checkout by Stripe. Your purchase shows as sold through Link.</p>
     </section>
   );
 }
 
-function PlanSummary({ plan }: { plan: Plan }) {
+function ManageBilling() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const open = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const { url } = await call<{ url: string }>("/api/billing/portal", { method: "POST" });
+      location.href = url;
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button onClick={open} disabled={busy} className="mt-3 inline-block text-brand underline disabled:opacity-50">
+        {busy ? "Opening billing…" : "Manage billing, card and invoices"}
+      </button>
+      {error && <p className="mt-2 text-sm text-brand">{error}</p>}
+    </>
+  );
+}
+
+function PlanSummary({ plan, canManage }: { plan: Plan; canManage: boolean }) {
   const line =
     plan.status === "on_trial"
       ? `Free trial until ${day(plan.trialEndsAt)}, then ${PRICES[plan.interval === "yearly" ? "yearly" : "monthly"].label}.`
@@ -161,11 +186,7 @@ function PlanSummary({ plan }: { plan: Plan }) {
       <p className="eyebrow">Your plan</p>
       <h2 className="mt-1 font-display text-2xl">Pro · {plan.interval === "yearly" ? "Yearly" : "Monthly"}</h2>
       <p className="mt-1 text-ink-2">{line}</p>
-      {plan.portalUrl && (
-        <a href={plan.portalUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-brand underline">
-          Manage billing, card and invoices ↗
-        </a>
-      )}
+      {canManage && <ManageBilling />}
     </section>
   );
 }
@@ -236,7 +257,7 @@ export function AccountPage() {
       .catch((err) => (err.status === 401 ? setAccount("out") : setAccount("out")));
   useEffect(() => {
     load();
-    // Lemon Squeezy's confirmation can arrive a few seconds after the redirect back.
+    // Stripe's confirmation can arrive a few seconds after the redirect back.
     if (params.get("welcome")) {
       const t = setInterval(load, 3000);
       setTimeout(() => clearInterval(t), 30000);
@@ -265,7 +286,7 @@ export function AccountPage() {
               </button>
             </p>
             {params.get("welcome") && !account.plan && <p className={card}>Thanks! Waiting for {APP_NAME}'s payment confirmation…</p>}
-            {account.plan && account.plan.status !== "expired" ? <PlanSummary plan={account.plan} /> : <StartPlan room={room} />}
+            {account.plan && account.plan.status !== "expired" ? <PlanSummary plan={account.plan} canManage={account.canManageBilling} /> : <StartPlan room={room} />}
             <Rooms account={account} suggested={room} onChange={(rooms) => setAccount({ ...account, rooms })} />
             {room && account.rooms.includes(room) && (
               <button onClick={() => navigate(`/r/${room}`)} className={primary}>

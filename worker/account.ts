@@ -17,7 +17,7 @@ interface SubscriptionRow {
   trial_ends_at: number | null;
   renews_at: number | null;
   ends_at: number | null;
-  portal_url: string | null;
+  customer_id: string | null;
   updated_at: number;
 }
 
@@ -33,7 +33,6 @@ function toPlan(row: SubscriptionRow): Plan {
     renewsAt: row.renews_at,
     endsAt: row.ends_at,
     subscriptionId: row.provider_id,
-    portalUrl: row.portal_url,
     updatedAt: row.updated_at,
   };
 }
@@ -41,6 +40,15 @@ function toPlan(row: SubscriptionRow): Plan {
 export async function subscriptionOf(env: Env, userId: string): Promise<Plan | null> {
   const row = await (await db(env)).prepare("SELECT * FROM subscriptions WHERE user_id = ?").bind(userId).first<SubscriptionRow>();
   return row ? toPlan(row) : null;
+}
+
+/** The payer's customer id at the payment provider, once they've been through checkout. */
+export async function customerOf(env: Env, userId: string): Promise<string | null> {
+  const row = await (await db(env))
+    .prepare("SELECT customer_id FROM subscriptions WHERE user_id = ?")
+    .bind(userId)
+    .first<{ customer_id: string | null }>();
+  return row?.customer_id ?? null;
 }
 
 export async function roomsOf(env: Env, userId: string): Promise<string[]> {
@@ -51,33 +59,42 @@ export async function roomsOf(env: Env, userId: string): Promise<string[]> {
   return results.map((r) => r.room_id);
 }
 
-/** Tells a room its current plan (null = back to free). Rooms never get the billing link. */
+/** Tells a room its current plan (null = back to free). */
 export async function pushPlan(env: Env, roomId: string, plan: Plan | null): Promise<boolean> {
   const stub = env.ROOMS.get(env.ROOMS.idFromName(roomId));
   const res = await stub.fetch(
     new Request(`https://room/billing?room=${encodeURIComponent(roomId)}`, {
       method: "POST",
-      body: JSON.stringify(plan ? { ...plan, portalUrl: null } : null),
+      body: JSON.stringify(plan),
     }),
   );
   return res.ok;
 }
 
 /** Saves a subscription update from the payment provider and passes it on to the owner's rooms. */
-export async function saveSubscription(env: Env, userId: string, plan: Plan, startedFromRoom: string | null): Promise<boolean> {
+export async function saveSubscription(
+  env: Env,
+  userId: string,
+  plan: Plan,
+  startedFromRoom: string | null,
+  customerId: string | null = null,
+): Promise<boolean> {
   const database = await db(env);
   const user = await database.prepare("SELECT id FROM users WHERE id = ?").bind(userId).first();
   if (!user) return false;
   await database
     .prepare(
-      `INSERT INTO subscriptions (user_id, provider_id, status, interval, trial_ends_at, renews_at, ends_at, portal_url, updated_at)
+      `INSERT INTO subscriptions (user_id, provider_id, status, interval, trial_ends_at, renews_at, ends_at, customer_id, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET provider_id = excluded.provider_id, status = excluded.status, interval = excluded.interval,
          trial_ends_at = excluded.trial_ends_at, renews_at = excluded.renews_at, ends_at = excluded.ends_at,
-         portal_url = excluded.portal_url, updated_at = excluded.updated_at`,
+         customer_id = COALESCE(excluded.customer_id, subscriptions.customer_id), updated_at = excluded.updated_at
+       WHERE excluded.updated_at >= subscriptions.updated_at`,
     )
-    .bind(userId, plan.subscriptionId, plan.status, plan.interval, plan.trialEndsAt, plan.renewsAt, plan.endsAt, plan.portalUrl, plan.updatedAt)
+    .bind(userId, plan.subscriptionId, plan.status, plan.interval, plan.trialEndsAt, plan.renewsAt, plan.endsAt, customerId, plan.updatedAt)
     .run();
+  // Events can arrive out of order; always act on the newest one we have.
+  const current = (await subscriptionOf(env, userId)) ?? plan;
   // First subscription started from a room: make that room Pro straight away.
   if (startedFromRoom && ROOM_ID_PATTERN.test(startedFromRoom)) {
     const rooms = await roomsOf(env, userId);
@@ -88,7 +105,7 @@ export async function saveSubscription(env: Env, userId: string, plan: Plan, sta
         .run();
     }
   }
-  const results = await Promise.all((await roomsOf(env, userId)).map((room) => pushPlan(env, room, plan)));
+  const results = await Promise.all((await roomsOf(env, userId)).map((room) => pushPlan(env, room, current)));
   return results.every(Boolean);
 }
 
@@ -107,6 +124,7 @@ export async function getAccount(request: Request, env: Env): Promise<Response> 
     email: user.email,
     plan,
     pro: isPro(plan, Date.now()),
+    canManageBilling: Boolean(await customerOf(env, user.id)),
     rooms: await roomsOf(env, user.id),
     maxRooms: MAX_PRO_ROOMS,
   });
