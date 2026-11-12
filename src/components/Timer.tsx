@@ -16,24 +16,25 @@ export function Timer({ room, offset, canControl, send }: { room: RoomView; offs
   const ss = String(remaining % 60).padStart(2, "0");
 
   return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className={`rounded-lg px-2 py-1 font-mono text-sm font-semibold tabular-nums ${
-          done ? "bg-danger text-white" : endsAt ? "bg-accent-soft text-ink" : "text-ink-3"
-        }`}
-        aria-live={done ? "assertive" : "off"}
-        title="Timer"
-      >
-        ⏱ {done ? "Time's up" : `${mm}:${ss}`}
-      </span>
-      {canControl && (
-        <button
-          onClick={() => send({ type: "timer", action: endsAt && !done ? "stop" : "start" })}
-          className="rounded-lg border border-line px-2 py-1 text-xs font-semibold hover:bg-surface-2"
+    <div className="text-right">
+      <p className="eyebrow">Timer</p>
+      <div className="flex items-baseline justify-end gap-3">
+        {canControl && (
+          <button
+            onClick={() => send({ type: "timer", action: endsAt && !done ? "stop" : "start" })}
+            className="font-mono text-[11px] tracking-wider text-ink-2 uppercase underline-offset-4 hover:underline"
+          >
+            {endsAt && !done ? "Stop" : done ? "Restart" : "Start"}
+          </button>
+        )}
+        <span
+          className={`font-display text-[44px] leading-none tabular-nums sm:text-[54px] ${done ? "animate-pulse text-brand" : endsAt ? "text-brand" : "text-ink-3"}`}
+          aria-live={done ? "assertive" : "off"}
+          title="Timer"
         >
-          {endsAt && !done ? "Stop" : done ? "Restart" : "Start"}
-        </button>
-      )}
+          {done ? "Time!" : `${mm}:${ss}`}
+        </span>
+      </div>
     </div>
   );
 }

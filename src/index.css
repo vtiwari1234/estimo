@@ -1,45 +1,49 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400..700&family=DM+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #f7f4ee;
-  --surface: #ffffff;
-  --surface-2: #f1ede4;
-  --line: #e4ddd0;
-  --ink: #1c1917;
-  --ink-2: #57534e;
-  --ink-3: #8a837a;
-  --brand: #0f766e;
+  --bg: #f3eee4;
+  --surface: #fbf8f2;
+  --surface-2: #f1eadd;
+  --line: #ddd4c4;
+  --ink: #1b1814;
+  --ink-2: #5a534a;
+  --ink-3: #8f8679;
+  --brand: #d9432a;
   --brand-ink: #ffffff;
-  --brand-soft: #d6efeb;
-  --accent: #f59e0b;
-  --accent-soft: #fdf0d5;
-  --danger: #be123c;
-  --felt: #134e4a;
-  --felt-2: #0f3f3c;
-  --card-back: #0f766e;
+  --brand-soft: #f7e4da;
+  --accent: #c9973b;
+  --accent-soft: #f4e6c8;
+  --danger: #b4231a;
+  --felt: #1f4a37;
+  --felt-2: #163829;
+  --card-back: #1f4a37;
+  --paper: #fbf8f2;
+  --grain: rgba(27, 24, 20, 0.045);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #12110f;
-  --surface: #1c1a17;
-  --surface-2: #262420;
-  --line: #36332e;
-  --ink: #f5f2ec;
-  --ink-2: #c4bdb2;
-  --ink-3: #8f877c;
-  --brand: #2dd4bf;
-  --brand-ink: #062a27;
-  --brand-soft: #123b37;
-  --accent: #fbbf24;
-  --accent-soft: #3a2e12;
-  --danger: #fb7185;
-  --felt: #0d3532;
-  --felt-2: #0a2927;
-  --card-back: #14b8a6;
+  --bg: #14120f;
+  --surface: #1d1a16;
+  --surface-2: #27231d;
+  --line: #3a342b;
+  --ink: #f2ebdf;
+  --ink-2: #c3b9a8;
+  --ink-3: #8c8273;
+  --brand: #ff6a4d;
+  --brand-ink: #1b1814;
+  --brand-soft: #3b2119;
+  --accent: #e2b45c;
+  --accent-soft: #3a2e17;
+  --danger: #ff7b6b;
+  --felt: #1c4433;
+  --felt-2: #112c20;
+  --card-back: #1f4a37;
+  --paper: #f6f1e7;
+  --grain: rgba(255, 255, 255, 0.03);
   color-scheme: dark;
 }
 
@@ -59,13 +63,17 @@
   --color-danger: var(--danger);
   --color-felt: var(--felt);
   --color-felt-2: var(--felt-2);
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-paper: var(--paper);
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
 }
 
 html,
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grain) 1px, transparent 1px);
+  background-size: 4px 4px;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -84,14 +92,26 @@ button:disabled {
 }
 
 .felt {
-  background:
-    radial-gradient(ellipse at 50% 35%, color-mix(in oklab, var(--felt) 85%, white 15%), var(--felt) 55%, var(--felt-2));
+  background: radial-gradient(ellipse at 50% 30%, #2a5c46, var(--felt) 55%, var(--felt-2));
+  box-shadow:
+    inset 0 0 0 8px var(--felt-2),
+    inset 0 0 0 9px rgb(201 151 59 / 0.55),
+    inset 0 30px 80px rgb(0 0 0 / 0.25),
+    0 30px 60px -30px rgb(23 58 43 / 0.7);
 }
 
 .card-back {
   background:
-    repeating-linear-gradient(45deg, transparent 0 6px, rgb(255 255 255 / 0.12) 6px 7px),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 8px),
     var(--card-back);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 @keyframes float-up {

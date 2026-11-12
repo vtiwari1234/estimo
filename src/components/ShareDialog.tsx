@@ -28,7 +28,7 @@ export function ShareDialog({ roomId, onClose }: { roomId: string; onClose: () =
       <p className="text-sm text-ink-2">Anyone with this link can join. No account needed.</p>
       <div className="mt-3 flex gap-2">
         <input readOnly value={url} onFocus={(e) => e.target.select()} className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 py-2 text-sm" />
-        <button onClick={copy} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-ink">
+        <button onClick={copy} className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-bg">
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
