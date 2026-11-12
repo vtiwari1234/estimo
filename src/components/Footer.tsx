@@ -17,7 +17,14 @@ export function Footer() {
     return (
       <footer className="mx-4 mt-20 border-t border-line py-14 text-center sm:mx-16">
         <p className="text-base font-semibold text-ink-2">No tracking · No ads</p>
-        <p className="mt-2 eyebrow">
+        <nav className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-ink-2">
+          <a href="/pricing" className="hover:underline">Pricing</a>
+          <a href="/terms" className="hover:underline">Terms</a>
+          <a href="/privacy" className="hover:underline">Privacy</a>
+          <a href="/refunds" className="hover:underline">Refunds</a>
+          <a href={`mailto:support@${APP_NAME.toLowerCase()}.com`} className="hover:underline">Contact</a>
+        </nav>
+        <p className="mt-3 eyebrow">
           © {year} {APP_NAME}
         </p>
       </footer>

@@ -22,6 +22,14 @@
         { "pattern": "www.agilesizing.com", "custom_domain": true }
       ],
       "workers_dev": false,
+      // Billing settings. The API key and webhook secret are secrets, set in the
+      // Cloudflare dashboard (Settings → Variables and Secrets), never in this file.
+      "vars": {
+        "EDITION": "pro",
+        "LS_STORE_ID": "",
+        "LS_VARIANT_MONTHLY": "",
+        "LS_VARIANT_YEARLY": ""
+      },
       "durable_objects": {
         "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
       },

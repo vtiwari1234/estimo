@@ -1,7 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import type { ClientMessage, RoomState, ServerMessage } from "../shared/protocol";
 import type { Env } from "./index";
-import { applyMessage, createRoom, handleDisconnect, toView } from "../shared/room";
+import { FREE_VOTER_LIMIT, isPro, type Plan } from "../shared/plan";
+import { NO_LIMITS, applyMessage, createRoom, handleDisconnect, toView, type Policy } from "../shared/room";
 
 /** Rooms nobody has touched for this long are deleted. */
 const EXPIRY_MS = 90 * 24 * 60 * 60 * 1000;
@@ -29,10 +30,21 @@ export class Room extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === "/billing" && request.method === "POST") {
+      // Only the Worker can reach a Durable Object, and it verifies the webhook first.
+      const plan = (await request.json()) as Plan;
+      if (!this.state) this.state = createRoom(url.searchParams.get("room") ?? "room", Date.now());
+      this.state.plan = plan;
+      this.state.updatedAt = Date.now();
+      await this.save();
+      this.broadcastState();
+      return new Response("OK");
+    }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected a WebSocket", { status: 426 });
     }
-    const roomId = new URL(request.url).searchParams.get("room") ?? "room";
+    const roomId = url.searchParams.get("room") ?? "room";
     if (!this.state) this.state = createRoom(roomId, Date.now());
 
     const pair = new WebSocketPair();
@@ -65,7 +77,7 @@ export class Room extends DurableObject<Env> {
     if (!actor) return this.send(ws, { type: "error", message: "Join the room first." });
 
     const now = Date.now();
-    const result = applyMessage(state, actor, msg, now, this.onlineIds());
+    const result = applyMessage(state, actor, msg, now, this.onlineIds(), this.policy(now));
     if (result.error) this.send(ws, { type: "error", message: result.error });
     if (result.reaction) this.broadcast({ type: "reaction", ...result.reaction });
     if (result.kicked) {
@@ -118,6 +130,12 @@ export class Room extends DurableObject<Env> {
     this.broadcastState();
   }
 
+  /** Paid site: free rooms get a voter limit until a plan (or trial) is active. */
+  private policy(now: number): Policy {
+    if (this.env.EDITION !== "pro" || isPro(this.state?.plan, now)) return NO_LIMITS;
+    return { maxVoters: FREE_VOTER_LIMIT };
+  }
+
   private onlineIds(): Set<string> {
     const ids = new Set<string>();
     for (const socket of this.ctx.getWebSockets()) {
@@ -137,9 +155,11 @@ export class Room extends DurableObject<Env> {
     if (!this.state) return;
     const online = this.onlineIds();
     const now = Date.now();
+    const policy = this.policy(now);
+    const pro = this.env.EDITION === "pro" && isPro(this.state.plan, now);
     for (const socket of this.ctx.getWebSockets()) {
       const a = socket.deserializeAttachment() as Attachment | null;
-      if (a?.pid) this.send(socket, { type: "state", room: toView(this.state, online, now, a.pid), you: a.pid });
+      if (a?.pid) this.send(socket, { type: "state", room: toView(this.state, online, now, a.pid, policy, pro), you: a.pid });
     }
   }
 
