@@ -64,13 +64,13 @@ export function Home() {
           <div>
             <p className="eyebrow">Nº 01 — Planning poker, done properly</p>
             <h1 className="mt-6 font-display text-[64px] leading-[0.92] tracking-[-0.02em] sm:text-[96px] lg:text-[112px]">
-              Size the work,
+              Every voice,
               <br />
-              <em className="text-brand">not the ego.</em>
+              <em className="text-brand">one estimate.</em>
             </h1>
             <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-ink-2">
-              Everyone picks a card in private. Everyone flips at once. The quiet engineer's 13 gets heard before the
-              loudest voice's 3 settles it. {BRAND} is free, real-time and needs no sign-up.
+              Everyone picks a card in private, everyone flips at once, and every voice counts the same. A calm,
+              friendly way to agree on the work. {BRAND} is free, real-time and needs no sign-up.
             </p>
 
             <form onSubmit={create} className="mt-9 max-w-[34rem]">
