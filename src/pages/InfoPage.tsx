@@ -48,7 +48,7 @@ function Pricing() {
             {PRICES.monthly.label.split(" ")[0]}
             <span className="text-base font-normal text-ink-2"> / month</span>
           </p>
-          <p className="text-sm">or {PRICES.yearly.label} (save 25%)</p>
+          <p className="text-sm">or {PRICES.yearly.label} (save 25%), plus applicable sales tax</p>
           <ul className="mt-3 space-y-1 text-sm">
             <li>Unlimited voters in up to {MAX_PRO_ROOMS} rooms, swap them any time</li>
             <li>Everything in Free</li>
@@ -58,7 +58,7 @@ function Pricing() {
       </div>
       <p>
         Start a trial from your <a href="/account">account page</a> or the <strong>Try Pro</strong> button in a room. You enter a
-        card at checkout. It's charged when the trial ends unless you cancel, and we email you 3 days before.
+        card at checkout. It's charged when the trial ends unless you cancel, and we email you 3 days before. Sales tax or VAT is added at checkout where it applies.
       </p>
       <p>
         Private by design: no ads, no tracking, no connectors into your company's tools, and no sign-up for voters. Rooms

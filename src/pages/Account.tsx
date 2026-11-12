@@ -119,7 +119,7 @@ function StartPlan({ room }: { room: string }) {
       <p className="mt-2 text-sm text-ink-2">
         Unlimited voters in up to {MAX_PRO_ROOMS} rooms{room ? <>, starting with <span className="font-mono">/{room}</span></> : null}. Free for{" "}
         {TRIAL_DAYS} days, then billed to the card you enter. Cancel before the trial ends and you won't be charged. We email you 3 days
-        before.
+        before. Sales tax is added where it applies.
       </p>
       <div className="mt-4 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Billing period">
         {(["monthly", "yearly"] as const).map((k) => (
